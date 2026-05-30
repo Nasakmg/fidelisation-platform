@@ -7,6 +7,8 @@ const clientRoutes = require('./routes/clientRoutes');
 const entrepriseRoutes = require('./routes/entrepriseRoutes');
 const transactionRoutes = require('./routes/transactionRoutes');
 
+const dashboardRoutes = require('./routes/dashboardRoutes');
+
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -29,3 +31,5 @@ app.get('/', (req, res) => {
 app.listen(PORT, () => {
   console.log(`✅ Serveur démarré sur le port ${PORT}`);
 });
+app.use('/api/dashboard', dashboardRoutes);
+
