@@ -94,6 +94,12 @@ export default function DashboardPage() {
                     >
                         <span>👥</span> Mes Clients
                     </button>
+                    <button
+                        onClick={() => router.push('/dashboard/campagnes')}
+                        className="bg-white hover:bg-gray-50 text-gray-800 px-6 py-3 rounded-xl font-medium flex items-center gap-2 border transition"
+                    >
+                        <span>📢</span> Campagnes
+                    </button>
                 </div>
 
                 {/* Cartes statistiques */}
