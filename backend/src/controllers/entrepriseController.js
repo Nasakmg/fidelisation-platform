@@ -84,4 +84,34 @@ const connecterEntreprise = async (req, res) => {
   }
 };
 
-module.exports = { inscrireEntreprise, connecterEntreprise };
+// Liste des clients de l'entreprise
+const getClients = async (req, res) => {
+  const entreprise_id = req.user.id;
+
+  try {
+    const result = await pool.query(
+      `SELECT DISTINCT c.id, c.nom, c.prenom, c.email, c.telephone,
+              c.qr_code, c.points_total, c.created_at,
+              COUNT(t.id) as nombre_achats,
+              SUM(t.montant) as total_depense,
+              MAX(t.created_at) as dernier_achat
+       FROM clients c
+       JOIN transactions t ON c.id = t.client_id
+       WHERE t.entreprise_id = $1
+       GROUP BY c.id
+       ORDER BY total_depense DESC`,
+      [entreprise_id]
+    );
+
+    res.json({
+      total: result.rows.length,
+      clients: result.rows
+    });
+
+  } catch (err) {
+    res.status(500).json({ message: '❌ Erreur serveur', error: err.message });
+  }
+};
+
+module.exports = { inscrireEntreprise, connecterEntreprise, getClients };
+

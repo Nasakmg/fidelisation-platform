@@ -1,0 +1,142 @@
+const pool = require('../config/db');
+const { envoyerSMS } = require('../config/twilio');
+
+// Créer une campagne
+const creerCampagne = async (req, res) => {
+  const { titre, message, canal } = req.body;
+  const entreprise_id = req.user.id;
+
+  try {
+    const result = await pool.query(
+      `INSERT INTO campagnes (entreprise_id, titre, message, canal, statut)
+       VALUES ($1, $2, $3, $4, 'brouillon')
+       RETURNING *`,
+      [entreprise_id, titre, message, canal]
+    );
+
+    res.status(201).json({
+      message: '✅ Campagne créée !',
+      campagne: result.rows[0]
+    });
+
+  } catch (err) {
+    res.status(500).json({ message: '❌ Erreur serveur', error: err.message });
+  }
+};
+
+// Liste des campagnes
+const getCampagnes = async (req, res) => {
+  const entreprise_id = req.user.id;
+
+  try {
+    const result = await pool.query(
+      `SELECT * FROM campagnes
+       WHERE entreprise_id = $1
+       ORDER BY created_at DESC`,
+      [entreprise_id]
+    );
+
+    res.json({
+      total: result.rows.length,
+      campagnes: result.rows
+    });
+
+  } catch (err) {
+    res.status(500).json({ message: '❌ Erreur serveur', error: err.message });
+  }
+};
+
+// Envoyer une campagne
+const envoyerCampagne = async (req, res) => {
+  const { id } = req.params;
+  const entreprise_id = req.user.id;
+
+  try {
+    // Récupérer tous les clients de l'entreprise
+    const clientsResult = await pool.query(
+      `SELECT DISTINCT c.id, c.nom, c.prenom, c.email, c.telephone
+       FROM clients c
+       JOIN transactions t ON c.id = t.client_id
+       WHERE t.entreprise_id = $1`,
+      [entreprise_id]
+    );
+
+    const clients = clientsResult.rows;
+
+    if (clients.length === 0) {
+      return res.status(400).json({ message: '❌ Aucun client à notifier' });
+    }
+
+    // Récupérer la campagne
+    const campagneResult = await pool.query(
+      'SELECT * FROM campagnes WHERE id = $1 AND entreprise_id = $2',
+      [id, entreprise_id]
+    );
+
+    if (campagneResult.rows.length === 0) {
+      return res.status(404).json({ message: '❌ Campagne introuvable' });
+    }
+
+    const campagne = campagneResult.rows[0];
+    let smsEnvoyes = 0;
+    let smsEchecs = 0;
+
+    // Envoyer SMS et notifications pour chaque client
+    for (const client of clients) {
+
+      // Enregistrer la notification en base
+      await pool.query(
+        `INSERT INTO notifications (client_id, message, canal, statut)
+         VALUES ($1, $2, $3, 'envoyé')`,
+        [client.id, campagne.message, campagne.canal]
+      );
+
+      // Envoyer SMS si canal = sms
+      if (campagne.canal === 'sms' && client.telephone) {
+        const result = await envoyerSMS(client.telephone, campagne.message);
+        if (result.success) {
+          smsEnvoyes++;
+        } else {
+          smsEchecs++;
+        }
+      }
+    }
+
+    // Mettre à jour le statut de la campagne
+    await pool.query(
+      `UPDATE campagnes SET statut = 'envoyée', date_envoi = NOW()
+       WHERE id = $1`,
+      [id]
+    );
+
+    res.json({
+      message: `✅ Campagne envoyée à ${clients.length} client(s) !`,
+      nombre_destinataires: clients.length,
+      sms_envoyes: smsEnvoyes,
+      sms_echecs: smsEchecs
+    });
+
+  } catch (err) {
+    res.status(500).json({ message: '❌ Erreur serveur', error: err.message });
+  }
+};
+
+// Supprimer une campagne
+const supprimerCampagne = async (req, res) => {
+  const { id } = req.params;
+  const entreprise_id = req.user.id;
+
+  try {
+    await pool.query(
+      'DELETE FROM campagnes WHERE id = $1 AND entreprise_id = $2',
+      [id, entreprise_id]
+    );
+
+    res.json({ message: '✅ Campagne supprimée !' });
+
+  } catch (err) {
+    res.status(500).json({ message: '❌ Erreur serveur', error: err.message });
+  }
+};
+
+module.exports = { creerCampagne, getCampagnes, envoyerCampagne, supprimerCampagne };

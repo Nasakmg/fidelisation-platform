@@ -5,7 +5,7 @@ const {
   historiqueEntreprise,
   historiqueClient
 } = require('../controllers/transactionController');
-const verifyToken = require('../middleware/auth');
+const { verifyToken } = require('../middleware/auth');
 
 // Entreprise scanne le QR code d'un client
 router.post('/scanner', verifyToken, scannerQRCode);

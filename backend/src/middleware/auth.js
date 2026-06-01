@@ -1,7 +1,8 @@
 const jwt = require('jsonwebtoken');
 
 const verifyToken = (req, res, next) => {
-  const token = req.headers['authorization']?.split(' ')[1];
+  const authHeader = req.headers['authorization'];
+  const token = authHeader?.split(' ')[1];
 
   if (!token) {
     return res.status(401).json({ message: '❌ Token manquant' });
@@ -16,4 +17,13 @@ const verifyToken = (req, res, next) => {
   }
 };
 
-module.exports = verifyToken;
+const verifyAdmin = (req, res, next) => {
+  verifyToken(req, res, () => {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: '❌ Accès refusé' });
+    }
+    next();
+  });
+};
+
+module.exports = { verifyToken, verifyAdmin };

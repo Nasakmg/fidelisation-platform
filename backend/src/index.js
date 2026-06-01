@@ -6,8 +6,11 @@ const pool = require('./config/db');
 const clientRoutes = require('./routes/clientRoutes');
 const entrepriseRoutes = require('./routes/entrepriseRoutes');
 const transactionRoutes = require('./routes/transactionRoutes');
-
 const dashboardRoutes = require('./routes/dashboardRoutes');
+const campagneRoutes = require('./routes/campagneRoutes');
+const adminRoutes = require('./routes/adminRoutes');
+const { creerClasseCarte } = require('./config/googleWallet');
+
 
 
 const app = express();
@@ -33,3 +36,9 @@ app.listen(PORT, () => {
 });
 app.use('/api/dashboard', dashboardRoutes);
 
+app.use('/api/campagnes', campagneRoutes);
+
+app.use('/api/admin', adminRoutes);
+
+
+creerClasseCarte();

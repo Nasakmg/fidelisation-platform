@@ -2,3 +2,6 @@ node_modules/
 .env
 .env.local
 dist/
+
+*.json
+src/config/fidelitewalletperso-789d16de0a70.json
