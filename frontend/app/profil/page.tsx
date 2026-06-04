@@ -2,26 +2,34 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
-import { useAuth } from '../context/AuthContext';
+import { useClientAuth } from '../context/ClientAuthContext';
+import { motion } from 'framer-motion';
+import { QRCodeSVG } from 'qrcode.react';
+import {
+  LogOut, Star, Crown, Wallet,
+  History, ChevronRight, Sparkles
+} from 'lucide-react';
 
 export default function ProfilPage() {
-  const { token, logout } = useAuth();
+  const { clientToken, clientLogout } = useClientAuth();
   const router = useRouter();
   const [client, setClient] = useState<any>(null);
-  const [lienWallet, setLienWallet] = useState<string | null>(null);
-  const [chargement, setChargement] = useState(true);
   const [walletLoading, setWalletLoading] = useState(false);
+  const [chargement, setChargement] = useState(true);
 
   useEffect(() => {
-    if (!token) { router.push('/'); return; }
+    if (!clientToken) {
+      router.push('/client');
+      return;
+    }
     fetchProfil();
-  }, [token]);
+  }, [clientToken]);
 
   const fetchProfil = async () => {
     try {
       const response = await axios.get(
         `${process.env.NEXT_PUBLIC_API_URL}/api/clients/profil`,
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: { Authorization: `Bearer ${clientToken}` } }
       );
       setClient(response.data);
     } catch (err) {
@@ -36,9 +44,8 @@ export default function ProfilPage() {
     try {
       const response = await axios.get(
         `${process.env.NEXT_PUBLIC_API_URL}/api/clients/wallet`,
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: { Authorization: `Bearer ${clientToken}` } }
       );
-      setLienWallet(response.data.lien_wallet);
       window.open(response.data.lien_wallet, '_blank');
     } catch (err) {
       console.error(err);
@@ -48,106 +55,194 @@ export default function ProfilPage() {
   };
 
   const getBadge = (points: number) => {
-    if (points >= 500) return { label: '👑 VIP', color: 'bg-yellow-100 text-yellow-700' };
-    if (points >= 200) return { label: '⭐ Gold', color: 'bg-orange-100 text-orange-700' };
-    if (points >= 100) return { label: '🥈 Silver', color: 'bg-gray-100 text-gray-700' };
-    return { label: '🥉 Bronze', color: 'bg-amber-100 text-amber-700' };
+    if (points >= 500) return { label: 'VIP', icon: Crown, color: 'text-yellow-400', bg: 'bg-yellow-400/10 border-yellow-400/20' };
+    if (points >= 200) return { label: 'Gold', icon: Star, color: 'text-orange-400', bg: 'bg-orange-400/10 border-orange-400/20' };
+    if (points >= 100) return { label: 'Silver', icon: Star, color: 'text-gray-300', bg: 'bg-gray-300/10 border-gray-300/20' };
+    return { label: 'Bronze', icon: Star, color: 'text-amber-600', bg: 'bg-amber-600/10 border-amber-600/20' };
+  };
+
+  const getProchainNiveau = (points: number) => {
+    if (points < 100) return { label: 'Silver', manque: 100 - points, total: 100 };
+    if (points < 200) return { label: 'Gold', manque: 200 - points, total: 200 };
+    if (points < 500) return { label: 'VIP', manque: 500 - points, total: 500 };
+    return null;
   };
 
   if (chargement) {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="min-h-screen bg-[#080808] flex items-center justify-center">
+        <div className="w-10 h-10 border-2 border-yellow-500/30 border-t-yellow-400 rounded-full animate-spin" />
       </div>
     );
   }
 
   const badge = getBadge(client?.points_total || 0);
+  const BadgeIcon = badge.icon;
+  const prochainNiveau = getProchainNiveau(client?.points_total || 0);
+  const progression = prochainNiveau
+    ? ((client?.points_total / prochainNiveau.total) * 100)
+    : 100;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-900 to-blue-700">
+    <div className="min-h-screen bg-[#080808] pb-10">
 
-      {/* Header */}
-      <div className="px-6 py-8 text-center">
-        <div className="bg-white w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4">
-          <span className="text-blue-600 font-bold text-2xl">
-            {client?.nom[0]}{client?.prenom[0]}
-          </span>
+      <div className="relative bg-gradient-to-b from-yellow-500/10 to-transparent pt-12 pb-20 px-6 text-center">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(234,179,8,0.12)_0%,transparent_70%)]" />
+
+        <div className="flex items-center justify-center gap-2 mb-8 relative z-10">
+          <div className="w-8 h-8 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-lg flex items-center justify-center">
+            <Sparkles size={14} className="text-black" />
+          </div>
+          <span className="text-white font-bold">FidélisationPro</span>
         </div>
-        <h1 className="text-white text-2xl font-bold">
-          {client?.nom} {client?.prenom}
-        </h1>
-        <p className="text-blue-200 text-sm mt-1">{client?.email}</p>
-        <span className={`inline-block mt-2 px-3 py-1 rounded-full text-sm font-medium ${badge.color}`}>
-          {badge.label}
-        </span>
+
+        <motion.div
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={{ type: 'spring', stiffness: 200 }}
+          className="relative z-10"
+        >
+          <div className="w-20 h-20 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-lg shadow-yellow-500/20">
+            <span className="text-black font-bold text-2xl">
+              {client?.nom[0]}{client?.prenom[0]}
+            </span>
+          </div>
+          <h1 className="text-white text-xl font-bold mb-1">
+            {client?.nom} {client?.prenom}
+          </h1>
+          <p className="text-gray-500 text-sm mb-3">{client?.email}</p>
+          <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-sm font-medium ${badge.bg} ${badge.color}`}>
+            <BadgeIcon size={13} />
+            {badge.label}
+          </div>
+        </motion.div>
       </div>
 
-      {/* Carte fidélité */}
-      <div className="mx-6 bg-white rounded-3xl p-6 shadow-2xl mb-6">
+      <div className="px-4 -mt-10 space-y-4 max-w-md mx-auto">
 
         {/* Points */}
-        <div className="text-center mb-6">
-          <p className="text-gray-500 text-sm">Vos points fidélité</p>
-          <p className="text-5xl font-bold text-blue-600 mt-1">
-            {client?.points_total}
-          </p>
-          <p className="text-gray-400 text-sm">points</p>
-        </div>
-
-        {/* QR Code */}
-        <div className="bg-gray-50 rounded-2xl p-6 text-center mb-6">
-          <p className="text-gray-500 text-sm mb-3">Votre QR Code</p>
-          <div className="bg-white p-4 rounded-xl inline-block shadow-sm">
-            <div className="w-32 h-32 bg-gray-200 rounded-lg flex items-center justify-center mx-auto">
-              <span className="text-4xl">📱</span>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-[#0d0d0d] border border-white/[0.08] rounded-2xl p-6 shadow-xl"
+        >
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <p className="text-gray-500 text-sm">Vos points fidélité</p>
+              <p className="text-4xl font-bold text-white mt-1">
+                {client?.points_total}
+                <span className="text-yellow-400 text-lg ml-1">pts</span>
+              </p>
+            </div>
+            <div className="w-14 h-14 bg-yellow-400/10 border border-yellow-400/20 rounded-2xl flex items-center justify-center">
+              <Star size={24} className="text-yellow-400" />
             </div>
           </div>
-          <p className="font-mono text-gray-700 font-bold mt-3 text-lg">
-            {client?.qr_code}
-          </p>
-          <p className="text-gray-400 text-xs mt-1">
-            Présentez ce code en caisse
-          </p>
-        </div>
+          {prochainNiveau && (
+            <div>
+              <div className="flex justify-between text-xs text-gray-600 mb-2">
+                <span>Progression vers {prochainNiveau.label}</span>
+                <span>{prochainNiveau.manque} pts restants</span>
+              </div>
+              <div className="w-full bg-white/[0.06] rounded-full h-2">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: `${progression}%` }}
+                  transition={{ duration: 1, delay: 0.3 }}
+                  className="h-2 bg-gradient-to-r from-yellow-400 to-yellow-600 rounded-full"
+                />
+              </div>
+            </div>
+          )}
+        </motion.div>
 
-        {/* Bouton Google Wallet */}
-        <button
+        {/* QR Code */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="bg-[#0d0d0d] border border-white/[0.08] rounded-2xl p-6"
+        >
+          <h3 className="text-white font-semibold mb-1">Votre QR Code</h3>
+          <p className="text-gray-600 text-xs mb-5">
+            Présentez ce code en caisse pour gagner des points
+          </p>
+          <div className="flex flex-col items-center">
+            <div className="bg-white p-4 rounded-2xl shadow-lg mb-4">
+              <QRCodeSVG
+                value={client?.qr_code || ''}
+                size={180}
+                level="H"
+                includeMargin={false}
+              />
+            </div>
+            <div className="flex items-center gap-2 bg-white/[0.04] border border-white/[0.06] rounded-xl px-4 py-2">
+              <span className="font-mono text-yellow-400 text-sm font-bold">
+                {client?.qr_code}
+              </span>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Google Wallet */}
+        <motion.button
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
           onClick={handleGoogleWallet}
           disabled={walletLoading}
-          className="w-full bg-black hover:bg-gray-900 text-white font-semibold py-4 rounded-2xl flex items-center justify-center gap-3 transition disabled:opacity-50"
+          className="w-full bg-black hover:bg-gray-900 border border-white/[0.08] text-white font-semibold py-4 rounded-2xl flex items-center justify-center gap-3 transition-all disabled:opacity-50"
         >
           {walletLoading ? (
-            <span>Chargement...</span>
+            <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
           ) : (
             <>
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/>
-              </svg>
+              <Wallet size={20} className="text-blue-400" />
               <span>Ajouter à Google Wallet</span>
+              <ChevronRight size={16} className="text-gray-600 ml-auto" />
             </>
           )}
-        </button>
+        </motion.button>
 
-      </div>
-
-      {/* Infos membre */}
-      <div className="mx-6 bg-white bg-opacity-20 rounded-2xl p-4 mb-6">
-        <p className="text-white text-sm text-center">
-          Membre depuis le {new Date(client?.created_at).toLocaleDateString('fr-FR')}
-        </p>
-      </div>
-
-      {/* Déconnexion */}
-      <div className="px-6 pb-8">
-        <button
-          onClick={() => { logout(); router.push('/'); }}
-          className="w-full bg-white bg-opacity-20 hover:bg-opacity-30 text-white font-medium py-3 rounded-xl transition"
+        {/* Infos */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="bg-[#0d0d0d] border border-white/[0.08] rounded-2xl p-4"
         >
-          Déconnexion
-        </button>
-      </div>
+          <div className="flex items-center justify-between py-2">
+            <div className="flex items-center gap-3">
+              <History size={16} className="text-gray-600" />
+              <span className="text-gray-400 text-sm">Membre depuis</span>
+            </div>
+            <span className="text-white text-sm font-medium">
+              {new Date(client?.created_at).toLocaleDateString('fr-FR', {
+                day: 'numeric', month: 'long', year: 'numeric'
+              })}
+            </span>
+          </div>
+          <div className="border-t border-white/[0.04] mt-2 pt-2 flex items-center justify-between py-2">
+            <div className="flex items-center gap-3">
+              <Star size={16} className="text-gray-600" />
+              <span className="text-gray-400 text-sm">Statut</span>
+            </div>
+            <span className={`text-sm font-bold ${badge.color}`}>{badge.label}</span>
+          </div>
+        </motion.div>
 
+        {/* Déconnexion */}
+        <motion.button
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.4 }}
+          onClick={() => { clientLogout(); router.push('/client'); }}
+          className="w-full flex items-center justify-center gap-2 text-gray-600 hover:text-red-400 py-3 transition-colors text-sm"
+        >
+          <LogOut size={16} />
+          Déconnexion
+        </motion.button>
+      </div>
     </div>
   );
 }

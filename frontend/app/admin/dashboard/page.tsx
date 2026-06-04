@@ -2,7 +2,16 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { motion } from 'framer-motion';
+import {
+  AreaChart, Area, XAxis, YAxis,
+  CartesianGrid, Tooltip, ResponsiveContainer
+} from 'recharts';
+import {
+  Shield, Building2, Users, ShoppingBag,
+  TrendingUp, Star, Megaphone, LogOut,
+  Trash2, ArrowUpRight, BarChart2
+} from 'lucide-react';
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -42,7 +51,7 @@ export default function AdminDashboard() {
   };
 
   const handleSupprimer = async (id: number) => {
-    if (!confirm('Supprimer cette entreprise et toutes ses données ?')) return;
+    if (!confirm('Supprimer cette entreprise ?')) return;
     const token = localStorage.getItem('admin_token');
     try {
       await axios.delete(
@@ -50,7 +59,6 @@ export default function AdminDashboard() {
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setEntreprises(entreprises.filter(e => e.id !== id));
-      alert('✅ Entreprise supprimée !');
     } catch (err) {
       alert('❌ Erreur lors de la suppression');
     }
@@ -61,203 +69,248 @@ export default function AdminDashboard() {
     router.push('/admin');
   };
 
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-[#1a1a1a] border border-white/10 rounded-xl p-3">
+          <p className="text-gray-400 text-xs mb-1">{label}</p>
+          <p className="text-white font-bold">{parseInt(payload[0].value).toLocaleString()} FCFA</p>
+        </div>
+      );
+    }
+    return null;
+  };
+
   if (chargement) {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
+      <div className="min-h-screen bg-[#080808] flex items-center justify-center">
+        <div className="w-10 h-10 border-2 border-indigo-500/30 border-t-indigo-400 rounded-full animate-spin" />
       </div>
     );
   }
 
+  const statCards = [
+    { icon: Building2, label: 'Entreprises', value: stats?.statistiques?.total_entreprises, color: 'text-blue-400 bg-blue-400/10' },
+    { icon: Users, label: 'Clients', value: stats?.statistiques?.total_clients, color: 'text-green-400 bg-green-400/10' },
+    { icon: ShoppingBag, label: 'Transactions', value: stats?.statistiques?.total_transactions, color: 'text-yellow-400 bg-yellow-400/10' },
+    { icon: TrendingUp, label: 'Chiffre d\'affaires', value: `${(stats?.statistiques?.chiffre_affaires || 0).toLocaleString()} FCFA`, color: 'text-purple-400 bg-purple-400/10' },
+    { icon: Star, label: 'Points distribués', value: stats?.statistiques?.total_points, color: 'text-orange-400 bg-orange-400/10' },
+    { icon: Megaphone, label: 'Campagnes', value: stats?.statistiques?.total_campagnes, color: 'text-pink-400 bg-pink-400/10' },
+  ];
+
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-[#080808]">
 
       {/* Navbar */}
-      <nav className="bg-gray-900 px-6 py-4 flex justify-between items-center">
+      <nav className="border-b border-white/[0.06] px-8 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="bg-white w-10 h-10 rounded-xl flex items-center justify-center">
-            <span className="text-gray-900 text-lg">⚙️</span>
+          <div className="w-9 h-9 bg-indigo-500/10 border border-indigo-500/20 rounded-xl flex items-center justify-center">
+            <Shield size={16} className="text-indigo-400" />
           </div>
           <div>
-            <h1 className="font-bold text-white">Panel Administration</h1>
-            <p className="text-gray-400 text-xs">FidélisationPro</p>
+            <p className="text-white font-bold text-sm">Panel Administration</p>
+            <p className="text-gray-600 text-xs">FidélisationPro</p>
           </div>
         </div>
         <button
           onClick={handleLogout}
-          className="text-red-400 hover:text-red-300 text-sm font-medium"
+          className="flex items-center gap-2 text-gray-600 hover:text-red-400 transition-colors text-sm"
         >
+          <LogOut size={16} />
           Déconnexion
         </button>
       </nav>
 
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="px-8 py-8 max-w-7xl mx-auto">
 
         {/* Onglets */}
-        <div className="flex gap-2 mb-8 bg-white rounded-2xl p-2 shadow-sm w-fit">
+        <div className="flex gap-1 mb-8 bg-white/[0.03] border border-white/[0.06] rounded-xl p-1 w-fit">
           {[
-            { key: 'stats', label: '📊 Statistiques' },
-            { key: 'entreprises', label: '🏪 Entreprises' },
-            { key: 'clients', label: '👥 Clients' }
+            { key: 'stats', label: 'Statistiques', icon: BarChart2 },
+            { key: 'entreprises', label: 'Entreprises', icon: Building2 },
+            { key: 'clients', label: 'Clients', icon: Users },
           ].map((tab) => (
             <button
               key={tab.key}
               onClick={() => setOnglet(tab.key as any)}
-              className={`px-6 py-2 rounded-xl font-medium text-sm transition ${
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-all ${
                 onglet === tab.key
-                  ? 'bg-gray-900 text-white'
-                  : 'text-gray-600 hover:bg-gray-100'
+                  ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20'
+                  : 'text-gray-600 hover:text-gray-300'
               }`}
             >
+              <tab.icon size={15} />
               {tab.label}
             </button>
           ))}
         </div>
 
-        {/* Stats globales */}
+        {/* Stats */}
         {onglet === 'stats' && (
           <div>
             <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-              {[
-                { label: 'Entreprises', value: stats?.statistiques?.total_entreprises, icon: '🏪', color: 'bg-blue-50 text-blue-600' },
-                { label: 'Clients', value: stats?.statistiques?.total_clients, icon: '👥', color: 'bg-green-50 text-green-600' },
-                { label: 'Transactions', value: stats?.statistiques?.total_transactions, icon: '🛍️', color: 'bg-yellow-50 text-yellow-600' },
-                { label: 'Chiffre d\'affaires', value: `${stats?.statistiques?.chiffre_affaires?.toLocaleString()} FCFA`, icon: '💰', color: 'bg-purple-50 text-purple-600' },
-                { label: 'Points distribués', value: stats?.statistiques?.total_points, icon: '⭐', color: 'bg-orange-50 text-orange-600' },
-                { label: 'Campagnes', value: stats?.statistiques?.total_campagnes, icon: '📢', color: 'bg-pink-50 text-pink-600' },
-              ].map((stat, i) => (
-                <div key={i} className="bg-white rounded-2xl p-6 shadow-sm">
-                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-3 ${stat.color}`}>
-                    <span className="text-2xl">{stat.icon}</span>
+              {statCards.map((stat, i) => (
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.05 }}
+                  className="bg-[#0d0d0d] border border-white/[0.06] rounded-2xl p-6 hover:border-white/[0.10] transition-all"
+                >
+                  <div className={`w-11 h-11 rounded-xl flex items-center justify-center mb-4 ${stat.color}`}>
+                    <stat.icon size={20} />
                   </div>
-                  <p className="text-2xl font-bold text-gray-800">{stat.value}</p>
-                  <p className="text-gray-500 text-sm mt-1">{stat.label}</p>
-                </div>
+                  <p className="text-2xl font-bold text-white mb-1">{stat.value}</p>
+                  <p className="text-gray-600 text-sm">{stat.label}</p>
+                </motion.div>
               ))}
             </div>
 
-            {/* Graphique évolution */}
-            <div className="bg-white rounded-2xl p-6 shadow-sm">
-              <h3 className="text-lg font-bold text-gray-800 mb-4">
-                📈 Évolution des 7 derniers jours
-              </h3>
+            <div className="bg-[#0d0d0d] border border-white/[0.06] rounded-2xl p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h3 className="text-white font-semibold">Évolution globale</h3>
+                  <p className="text-gray-600 text-xs mt-0.5">7 derniers jours</p>
+                </div>
+                <div className="flex items-center gap-2 text-xs text-gray-600 bg-white/[0.04] px-3 py-1.5 rounded-lg">
+                  <div className="w-2 h-2 bg-indigo-400 rounded-full" />
+                  Montant FCFA
+                </div>
+              </div>
               {stats?.evolution?.length > 0 ? (
                 <ResponsiveContainer width="100%" height={250}>
-                  <BarChart data={stats.evolution}>
-                    <CartesianGrid strokeDasharray="3 3" />
+                  <AreaChart data={stats.evolution}>
+                    <defs>
+                      <linearGradient id="colorAdmin" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#6366f1" stopOpacity={0.15} />
+                        <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
                     <XAxis
                       dataKey="date"
                       tickFormatter={(val) => new Date(val).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })}
+                      tick={{ fill: '#4b5563', fontSize: 11 }}
+                      axisLine={false}
+                      tickLine={false}
                     />
-                    <YAxis />
-                    <Tooltip />
-                    <Bar dataKey="montant" fill="#111827" radius={[4, 4, 0, 0]} name="Montant (FCFA)" />
-                  </BarChart>
+                    <YAxis tick={{ fill: '#4b5563', fontSize: 11 }} axisLine={false} tickLine={false} />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Area type="monotone" dataKey="montant" stroke="#6366f1" strokeWidth={2} fill="url(#colorAdmin)" />
+                  </AreaChart>
                 </ResponsiveContainer>
               ) : (
-                <p className="text-gray-400 text-center py-8">Pas encore de données</p>
+                <div className="h-[250px] flex items-center justify-center">
+                  <p className="text-gray-700 text-sm">Pas encore de données</p>
+                </div>
               )}
             </div>
           </div>
         )}
 
-        {/* Liste entreprises */}
+        {/* Entreprises */}
         {onglet === 'entreprises' && (
-          <div className="space-y-4">
-            <p className="text-gray-500 text-sm mb-4">{entreprises.length} entreprise(s)</p>
-            {entreprises.map((e: any) => (
-              <div key={e.id} className="bg-white rounded-2xl p-6 shadow-sm">
-                <div className="flex justify-between items-start">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <div className="bg-blue-100 w-10 h-10 rounded-xl flex items-center justify-center">
-                        <span className="text-blue-600 font-bold">{e.nom[0]}</span>
-                      </div>
-                      <div>
-                        <p className="font-bold text-gray-800">{e.nom}</p>
-                        <p className="text-xs text-gray-500">{e.email} • {e.secteur}</p>
-                      </div>
-                      <span className="bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded-full">
-                        {e.plan_abonnement}
-                      </span>
+          <div className="space-y-3">
+            <p className="text-gray-600 text-sm mb-4">{entreprises.length} entreprise(s) inscrite(s)</p>
+            {entreprises.map((e: any, i: number) => (
+              <motion.div
+                key={e.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.05 }}
+                className="bg-[#0d0d0d] border border-white/[0.06] rounded-2xl p-6 hover:border-white/[0.10] transition-all"
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-4 flex-1">
+                    <div className="w-12 h-12 bg-gradient-to-br from-indigo-500/20 to-purple-500/20 rounded-xl flex items-center justify-center border border-indigo-500/20">
+                      <span className="text-indigo-400 font-bold">{e.nom[0]}</span>
                     </div>
-                    <div className="grid grid-cols-3 gap-4 mt-4">
-                      <div className="bg-gray-50 rounded-xl p-3 text-center">
-                        <p className="font-bold text-gray-800">{e.total_clients}</p>
-                        <p className="text-xs text-gray-500">Clients</p>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-1">
+                        <p className="text-white font-semibold">{e.nom}</p>
+                        <span className="text-xs bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 px-2 py-0.5 rounded-full">
+                          {e.plan_abonnement}
+                        </span>
                       </div>
-                      <div className="bg-gray-50 rounded-xl p-3 text-center">
-                        <p className="font-bold text-gray-800">{e.total_transactions}</p>
-                        <p className="text-xs text-gray-500">Transactions</p>
-                      </div>
-                      <div className="bg-gray-50 rounded-xl p-3 text-center">
-                        <p className="font-bold text-gray-800">
-                          {parseInt(e.chiffre_affaires).toLocaleString()}
-                        </p>
-                        <p className="text-xs text-gray-500">FCFA</p>
+                      <p className="text-gray-600 text-xs">{e.email} • {e.secteur}</p>
+                      <div className="flex items-center gap-6 mt-3">
+                        {[
+                          { label: 'Clients', value: e.total_clients },
+                          { label: 'Transactions', value: e.total_transactions },
+                          { label: 'CA (FCFA)', value: parseInt(e.chiffre_affaires).toLocaleString() },
+                        ].map((stat, j) => (
+                          <div key={j}>
+                            <p className="text-white font-bold text-sm">{stat.value}</p>
+                            <p className="text-gray-700 text-xs">{stat.label}</p>
+                          </div>
+                        ))}
                       </div>
                     </div>
                   </div>
                   <button
                     onClick={() => handleSupprimer(e.id)}
-                    className="ml-4 bg-red-50 hover:bg-red-100 text-red-600 px-4 py-2 rounded-lg text-sm font-medium transition"
+                    className="w-9 h-9 bg-red-500/5 hover:bg-red-500/10 border border-red-500/10 hover:border-red-500/20 text-red-500/40 hover:text-red-400 rounded-xl flex items-center justify-center transition-all ml-4"
                   >
-                    🗑️ Supprimer
+                    <Trash2 size={15} />
                   </button>
                 </div>
-              </div>
+              </motion.div>
             ))}
           </div>
         )}
 
-        {/* Liste clients */}
+        {/* Clients */}
         {onglet === 'clients' && (
           <div>
-            <p className="text-gray-500 text-sm mb-4">{clients.length} client(s)</p>
-            <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+            <p className="text-gray-600 text-sm mb-4">{clients.length} client(s) inscrit(s)</p>
+            <div className="bg-[#0d0d0d] border border-white/[0.06] rounded-2xl overflow-hidden">
               <table className="w-full">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="text-left px-6 py-4 text-sm font-medium text-gray-500">Client</th>
-                    <th className="text-left px-6 py-4 text-sm font-medium text-gray-500">Contact</th>
-                    <th className="text-left px-6 py-4 text-sm font-medium text-gray-500">QR Code</th>
-                    <th className="text-left px-6 py-4 text-sm font-medium text-gray-500">Points</th>
-                    <th className="text-left px-6 py-4 text-sm font-medium text-gray-500">Transactions</th>
-                    <th className="text-left px-6 py-4 text-sm font-medium text-gray-500">Inscrit le</th>
+                <thead>
+                  <tr className="border-b border-white/[0.06]">
+                    {['Client', 'Contact', 'QR Code', 'Points', 'Transactions', 'Inscrit le'].map((h) => (
+                      <th key={h} className="text-left px-6 py-4 text-xs font-medium text-gray-600 uppercase tracking-wider">
+                        {h}
+                      </th>
+                    ))}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {clients.map((c: any) => (
-                    <tr key={c.id} className="hover:bg-gray-50">
+                <tbody className="divide-y divide-white/[0.04]">
+                  {clients.map((c: any, i: number) => (
+                    <motion.tr
+                      key={c.id}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: i * 0.03 }}
+                      className="hover:bg-white/[0.02] transition-all"
+                    >
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
-                          <div className="bg-blue-100 w-8 h-8 rounded-full flex items-center justify-center">
-                            <span className="text-blue-600 text-xs font-bold">
+                          <div className="w-8 h-8 bg-gradient-to-br from-gray-700 to-gray-800 rounded-lg flex items-center justify-center">
+                            <span className="text-white text-xs font-bold">
                               {c.nom[0]}{c.prenom[0]}
                             </span>
                           </div>
-                          <span className="font-medium text-gray-800">{c.nom} {c.prenom}</span>
+                          <span className="text-white text-sm font-medium">{c.nom} {c.prenom}</span>
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-600">{c.email}</td>
-                      <td className="px-6 py-4 text-xs font-mono text-gray-500">{c.qr_code}</td>
+                      <td className="px-6 py-4 text-gray-500 text-sm">{c.email}</td>
+                      <td className="px-6 py-4 text-gray-600 text-xs font-mono">{c.qr_code}</td>
                       <td className="px-6 py-4">
-                        <span className="bg-blue-100 text-blue-700 text-sm font-bold px-3 py-1 rounded-full">
+                        <span className="bg-yellow-400/10 border border-yellow-400/20 text-yellow-400 text-xs font-bold px-3 py-1 rounded-full">
                           {c.points_total} pts
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-600">{c.total_transactions}</td>
-                      <td className="px-6 py-4 text-sm text-gray-500">
+                      <td className="px-6 py-4 text-gray-500 text-sm">{c.total_transactions}</td>
+                      <td className="px-6 py-4 text-gray-600 text-xs">
                         {new Date(c.created_at).toLocaleDateString('fr-FR')}
                       </td>
-                    </tr>
+                    </motion.tr>
                   ))}
                 </tbody>
               </table>
             </div>
           </div>
         )}
-
       </div>
     </div>
   );
