@@ -8,7 +8,7 @@ import {
   QrCode, ArrowLeft, CheckCircle,
   User, Star, ShoppingBag, Zap
 } from 'lucide-react';
-import dynamic from 'next/dynamic';
+
 
 
 export default function ScannerPage() {
@@ -20,21 +20,9 @@ export default function ScannerPage() {
   const [resultat, setResultat] = useState<any>(null);
   const [erreur, setErreur] = useState('');
   const [chargement, setChargement] = useState(false);
-  const QRScanner = dynamic(() => import('./QRScanner'), { ssr: false });
-  const [showCamera, setShowCamera] = useState(false);
-  const handleCameraScan = (result: string) => {
-  // Nettoyer le résultat (parfois il y a des espaces)
-  const qrNettoye = result.trim().toUpperCase();
-  setQrCode(qrNettoye);
-  setShowCamera(false);
-  // Forcer la mise à jour
-  setTimeout(() => {
-    const input = document.querySelector('input[placeholder="USR-XXXXXXXXXX"]') as HTMLInputElement;
-    if (input) {
-      input.value = qrNettoye;
-    }
-  }, 100);
-};
+  
+  
+
   const typesAchat = [
     { value: 'Vêtements', icon: '👗' },
     { value: 'Alimentation', icon: '🛒' },
@@ -135,7 +123,6 @@ export default function ScannerPage() {
               type="button"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              onClick={() => setShowCamera(true)}
               className="w-full flex items-center justify-center gap-2 bg-white/[0.04] border border-white/[0.08] text-gray-400 hover:text-white hover:border-yellow-500/30 py-3 rounded-xl transition-all text-sm mt-2"
             >
               <span>📷</span>
@@ -278,13 +265,7 @@ export default function ScannerPage() {
           )}
         </AnimatePresence>
       </div>
-      {/* Scanner caméra */}
-      {showCamera && (
-        <QRScanner
-          onScan={handleCameraScan}
-          onClose={() => setShowCamera(false)}
-        />
-      )}
+
     </div>
   );
 }
