@@ -262,7 +262,7 @@ export default function DashboardPage() {
         </motion.div>
 
         {/* Stats */}
-        <div className="grid grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <StatCard
             icon={Users}
             label="Clients uniques"
@@ -295,14 +295,15 @@ export default function DashboardPage() {
         </div>
 
         {/* Charts + Top clients */}
-        <div className="grid grid-cols-3 gap-6 mb-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+
 
           {/* Chart */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.5 }}
-            className="col-span-2 bg-[#0d0d0d] border border-white/[0.06] rounded-2xl p-6"
+            className="col-span-1 lg:col-span-2 bg-[#0d0d0d] border border-white/[0.06] rounded-2xl p-6"
           >
             <div className="flex items-center justify-between mb-6">
               <div>
