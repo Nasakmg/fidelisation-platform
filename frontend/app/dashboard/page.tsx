@@ -230,7 +230,8 @@ export default function DashboardPage() {
       <Sidebar entreprise={entreprise} onLogout={handleLogout} />
 
       {/* Main content */}
-      <div className="lg:ml-64 pt-16 lg:pt-0 p-4 lg:p-8">
+      <div className="ml-0 lg:ml-64 pt-16 lg:pt-0 p-4 lg:p-8 min-w-0 overflow-x-hidden">
+
 
         {/* Header */}
         <motion.div
@@ -261,7 +262,7 @@ export default function DashboardPage() {
         </motion.div>
 
         {/* Stats */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 mb-6">
           <StatCard
             icon={Users}
             label="Clients uniques"
@@ -294,7 +295,8 @@ export default function DashboardPage() {
         </div>
 
         {/* Charts + Top clients */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 mb-6">
+
 
 
           {/* Chart */}
