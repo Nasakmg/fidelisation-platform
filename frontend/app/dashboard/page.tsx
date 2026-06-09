@@ -45,15 +45,10 @@ const Sidebar = ({ entreprise, onLogout }: any) => {
         </button>
       </div>
 
-      {/* Mobile menu overlay */}
       {open && (
-        <div
-          className="lg:hidden fixed inset-0 bg-black/50 z-40"
-          onClick={() => setOpen(false)}
-        />
+        <div className="lg:hidden fixed inset-0 bg-black/50 z-40" onClick={() => setOpen(false)} />
       )}
 
-      {/* Mobile sidebar */}
       <div className={`lg:hidden fixed top-0 left-0 h-full w-72 bg-[#0d0d0d] border-r border-white/[0.06] z-50 transform transition-transform duration-300 ${open ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="p-6 border-b border-white/[0.06] mt-14">
           <div className="flex items-center gap-3 p-3 bg-white/[0.03] rounded-xl border border-white/[0.06]">
@@ -66,7 +61,6 @@ const Sidebar = ({ entreprise, onLogout }: any) => {
             </div>
           </div>
         </div>
-
         <nav className="p-3">
           {navItems.map((item, i) => (
             <button
@@ -83,7 +77,6 @@ const Sidebar = ({ entreprise, onLogout }: any) => {
             </button>
           ))}
         </nav>
-
         <div className="absolute bottom-0 left-0 right-0 p-3 border-t border-white/[0.06]">
           <button
             onClick={onLogout}
@@ -159,22 +152,23 @@ const StatCard = ({ icon: Icon, label, value, sub, color, delay }: any) => (
     initial={{ opacity: 0, y: 20 }}
     animate={{ opacity: 1, y: 0 }}
     transition={{ delay }}
-    className="bg-[#0d0d0d] border border-white/[0.06] rounded-2xl p-4 lg:p-6 hover:border-white/[0.12] transition-all"
+    className="bg-[#0d0d0d] border border-white/[0.06] rounded-2xl p-6 hover:border-white/[0.12] transition-all group"
   >
-    <div className="flex items-start justify-between mb-3">
-      <div className={`w-9 h-9 lg:w-11 lg:h-11 rounded-xl flex items-center justify-center ${color}`}>
-        <Icon size={16} />
+    <div className="flex items-start justify-between mb-4">
+      <div className={`w-11 h-11 rounded-xl flex items-center justify-center ${color}`}>
+        <Icon size={20} />
       </div>
-      <div className="flex items-center gap-1 text-green-400 text-[10px] bg-green-400/10 px-1.5 py-0.5 rounded-full">
-        <ArrowUpRight size={10} />
+      <div className="flex items-center gap-1 text-green-400 text-xs bg-green-400/10 px-2 py-1 rounded-full">
+        <ArrowUpRight size={12} />
         <span>Live</span>
       </div>
     </div>
-    <p className="text-xl lg:text-3xl font-bold text-white mb-1 truncate">{value}</p>
-    <p className="text-gray-500 text-xs lg:text-sm leading-tight">{label}</p>
-    {sub && <p className="text-gray-700 text-[10px] mt-0.5">{sub}</p>}
+    <p className="text-3xl font-bold text-white mb-1">{value}</p>
+    <p className="text-gray-500 text-sm">{label}</p>
+    {sub && <p className="text-gray-700 text-xs mt-1">{sub}</p>}
   </motion.div>
 );
+
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     return (
@@ -229,11 +223,8 @@ export default function DashboardPage() {
     <div className="min-h-screen bg-[#080808]">
       <Sidebar entreprise={entreprise} onLogout={handleLogout} />
 
-      {/* Main content */}
-      <div className="ml-0 lg:ml-64 pt-16 lg:pt-0 p-4 lg:p-8 min-w-0 overflow-x-hidden">
+      <div className="lg:ml-64 pt-16 lg:pt-0 p-8">
 
-
-        {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -261,50 +252,19 @@ export default function DashboardPage() {
           </div>
         </motion.div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 mb-6">
-          <StatCard
-            icon={Users}
-            label="Clients uniques"
-            value={stats?.statistiques?.total_clients || 0}
-            color="bg-blue-500/10 text-blue-400"
-            delay={0.1}
-          />
-          <StatCard
-            icon={ShoppingBag}
-            label="Transactions"
-            value={stats?.statistiques?.total_transactions || 0}
-            color="bg-green-500/10 text-green-400"
-            delay={0.2}
-          />
-          <StatCard
-            icon={TrendingUp}
-            label="Chiffre d'affaires"
-            value={`${(stats?.statistiques?.chiffre_affaires || 0).toLocaleString()}`}
-            sub="FCFA générés"
-            color="bg-yellow-500/10 text-yellow-400"
-            delay={0.3}
-          />
-          <StatCard
-            icon={Star}
-            label="Points distribués"
-            value={stats?.statistiques?.total_points_distribues || 0}
-            color="bg-purple-500/10 text-purple-400"
-            delay={0.4}
-          />
+        <div className="grid grid-cols-4 gap-4 mb-8">
+          <StatCard icon={Users} label="Clients uniques" value={stats?.statistiques?.total_clients || 0} color="bg-blue-500/10 text-blue-400" delay={0.1} />
+          <StatCard icon={ShoppingBag} label="Transactions" value={stats?.statistiques?.total_transactions || 0} color="bg-green-500/10 text-green-400" delay={0.2} />
+          <StatCard icon={TrendingUp} label="Chiffre d'affaires" value={`${(stats?.statistiques?.chiffre_affaires || 0).toLocaleString()}`} sub="FCFA générés" color="bg-yellow-500/10 text-yellow-400" delay={0.3} />
+          <StatCard icon={Star} label="Points distribués" value={stats?.statistiques?.total_points_distribues || 0} color="bg-purple-500/10 text-purple-400" delay={0.4} />
         </div>
 
-        {/* Charts + Top clients */}
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 mb-6">
-
-
-
-          {/* Chart */}
+        <div className="grid grid-cols-3 gap-6 mb-6">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.5 }}
-            className="col-span-1 lg:col-span-2 bg-[#0d0d0d] border border-white/[0.06] rounded-2xl p-6"
+            className="col-span-2 bg-[#0d0d0d] border border-white/[0.06] rounded-2xl p-6"
           >
             <div className="flex items-center justify-between mb-6">
               <div>
@@ -326,26 +286,10 @@ export default function DashboardPage() {
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
-                  <XAxis
-                    dataKey="date"
-                    tickFormatter={(val) => new Date(val).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })}
-                    tick={{ fill: '#4b5563', fontSize: 11 }}
-                    axisLine={false}
-                    tickLine={false}
-                  />
-                  <YAxis
-                    tick={{ fill: '#4b5563', fontSize: 11 }}
-                    axisLine={false}
-                    tickLine={false}
-                  />
+                  <XAxis dataKey="date" tickFormatter={(val) => new Date(val).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })} tick={{ fill: '#4b5563', fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fill: '#4b5563', fontSize: 11 }} axisLine={false} tickLine={false} />
                   <Tooltip content={<CustomTooltip />} />
-                  <Area
-                    type="monotone"
-                    dataKey="total_montant"
-                    stroke="#EAB308"
-                    strokeWidth={2}
-                    fill="url(#colorMontant)"
-                  />
+                  <Area type="monotone" dataKey="total_montant" stroke="#EAB308" strokeWidth={2} fill="url(#colorMontant)" />
                 </AreaChart>
               </ResponsiveContainer>
             ) : (
@@ -355,7 +299,6 @@ export default function DashboardPage() {
             )}
           </motion.div>
 
-          {/* Top clients */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -364,28 +307,15 @@ export default function DashboardPage() {
           >
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-white font-semibold">Top Clients</h3>
-              <button
-                onClick={() => router.push('/dashboard/clients')}
-                className="text-yellow-400 text-xs hover:text-yellow-300 transition-colors"
-              >
-                Voir tout →
-              </button>
+              <button onClick={() => router.push('/dashboard/clients')} className="text-yellow-400 text-xs hover:text-yellow-300 transition-colors">Voir tout →</button>
             </div>
             <div className="space-y-3">
               {stats?.top_clients?.length > 0 ? (
                 stats.top_clients.slice(0, 5).map((client: any, i: number) => (
-                  <motion.div
-                    key={i}
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.7 + i * 0.1 }}
-                    className="flex items-center gap-3 p-3 rounded-xl hover:bg-white/[0.03] transition-all"
-                  >
+                  <motion.div key={i} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.7 + i * 0.1 }} className="flex items-center gap-3 p-3 rounded-xl hover:bg-white/[0.03] transition-all">
                     <div className="relative">
                       <div className="w-9 h-9 bg-gradient-to-br from-gray-700 to-gray-800 rounded-full flex items-center justify-center">
-                        <span className="text-white text-xs font-bold">
-                          {client.nom[0]}{client.prenom[0]}
-                        </span>
+                        <span className="text-white text-xs font-bold">{client.nom[0]}{client.prenom[0]}</span>
                       </div>
                       <div className="absolute -top-1 -right-1 w-4 h-4 bg-[#0d0d0d] rounded-full flex items-center justify-center">
                         <span className="text-[9px]">{i === 0 ? '🥇' : i === 1 ? '🥈' : '🥉'}</span>
@@ -395,9 +325,7 @@ export default function DashboardPage() {
                       <p className="text-white text-sm font-medium truncate">{client.nom} {client.prenom}</p>
                       <p className="text-gray-600 text-xs">{client.points_total} pts</p>
                     </div>
-                    <p className="text-yellow-400 text-xs font-medium">
-                      {parseInt(client.total_depense).toLocaleString()}
-                    </p>
+                    <p className="text-yellow-400 text-xs font-medium">{parseInt(client.total_depense).toLocaleString()}</p>
                   </motion.div>
                 ))
               ) : (
@@ -407,7 +335,6 @@ export default function DashboardPage() {
           </motion.div>
         </div>
 
-        {/* Transactions récentes */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -419,11 +346,7 @@ export default function DashboardPage() {
               <h3 className="text-white font-semibold">Transactions récentes</h3>
               <p className="text-gray-600 text-xs mt-0.5">Dernières activités</p>
             </div>
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              onClick={() => router.push('/dashboard/scanner')}
-              className="flex items-center gap-2 text-sm text-yellow-400 hover:text-yellow-300 transition-colors"
-            >
+            <motion.button whileHover={{ scale: 1.02 }} onClick={() => router.push('/dashboard/scanner')} className="flex items-center gap-2 text-sm text-yellow-400 hover:text-yellow-300 transition-colors">
               Nouvelle transaction →
             </motion.button>
           </div>
@@ -431,13 +354,7 @@ export default function DashboardPage() {
           {stats?.transactions_recentes?.length > 0 ? (
             <div className="space-y-2">
               {stats.transactions_recentes.map((t: any, i: number) => (
-                <motion.div
-                  key={i}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.8 + i * 0.05 }}
-                  className="flex items-center justify-between p-4 rounded-xl hover:bg-white/[0.03] transition-all border border-transparent hover:border-white/[0.06]"
-                >
+                <motion.div key={i} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.8 + i * 0.05 }} className="flex items-center justify-between p-4 rounded-xl hover:bg-white/[0.03] transition-all border border-transparent hover:border-white/[0.06]">
                   <div className="flex items-center gap-4">
                     <div className="w-10 h-10 bg-green-500/10 rounded-xl flex items-center justify-center">
                       <ShoppingBag size={16} className="text-green-400" />
@@ -460,10 +377,7 @@ export default function DashboardPage() {
                 <ShoppingBag size={24} className="text-gray-700" />
               </div>
               <p className="text-gray-600 text-sm">Aucune transaction pour le moment</p>
-              <button
-                onClick={() => router.push('/dashboard/scanner')}
-                className="mt-4 text-yellow-400 text-sm hover:text-yellow-300 transition-colors"
-              >
+              <button onClick={() => router.push('/dashboard/scanner')} className="mt-4 text-yellow-400 text-sm hover:text-yellow-300 transition-colors">
                 Scanner votre premier client →
               </button>
             </div>
