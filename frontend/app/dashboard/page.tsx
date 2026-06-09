@@ -159,23 +159,22 @@ const StatCard = ({ icon: Icon, label, value, sub, color, delay }: any) => (
     initial={{ opacity: 0, y: 20 }}
     animate={{ opacity: 1, y: 0 }}
     transition={{ delay }}
-    className="bg-[#0d0d0d] border border-white/[0.06] rounded-2xl p-6 hover:border-white/[0.12] transition-all group"
+    className="bg-[#0d0d0d] border border-white/[0.06] rounded-2xl p-4 lg:p-6 hover:border-white/[0.12] transition-all"
   >
-    <div className="flex items-start justify-between mb-4">
-      <div className={`w-11 h-11 rounded-xl flex items-center justify-center ${color}`}>
-        <Icon size={20} />
+    <div className="flex items-start justify-between mb-3">
+      <div className={`w-9 h-9 lg:w-11 lg:h-11 rounded-xl flex items-center justify-center ${color}`}>
+        <Icon size={16} />
       </div>
-      <div className="flex items-center gap-1 text-green-400 text-xs bg-green-400/10 px-2 py-1 rounded-full">
-        <ArrowUpRight size={12} />
+      <div className="flex items-center gap-1 text-green-400 text-[10px] bg-green-400/10 px-1.5 py-0.5 rounded-full">
+        <ArrowUpRight size={10} />
         <span>Live</span>
       </div>
     </div>
-    <p className="text-3xl font-bold text-white mb-1">{value}</p>
-    <p className="text-gray-500 text-sm">{label}</p>
-    {sub && <p className="text-gray-700 text-xs mt-1">{sub}</p>}
+    <p className="text-xl lg:text-3xl font-bold text-white mb-1 truncate">{value}</p>
+    <p className="text-gray-500 text-xs lg:text-sm leading-tight">{label}</p>
+    {sub && <p className="text-gray-700 text-[10px] mt-0.5">{sub}</p>}
   </motion.div>
 );
-
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     return (
