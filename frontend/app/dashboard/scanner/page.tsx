@@ -8,6 +8,8 @@ import {
   QrCode, ArrowLeft, CheckCircle,
   User, Star, ShoppingBag, Zap
 } from 'lucide-react';
+import dynamic from 'next/dynamic';
+
 
 export default function ScannerPage() {
   const { token } = useAuth();
@@ -18,6 +20,12 @@ export default function ScannerPage() {
   const [resultat, setResultat] = useState<any>(null);
   const [erreur, setErreur] = useState('');
   const [chargement, setChargement] = useState(false);
+  const QRScanner = dynamic(() => import('./QRScanner'), { ssr: false });
+  const [showCamera, setShowCamera] = useState(false);
+  const handleCameraScan = (result: string) => {
+    setQrCode(result);
+    setShowCamera(false);
+  };
 
   const typesAchat = [
     { value: 'Vêtements', icon: '👗' },
@@ -114,6 +122,17 @@ export default function ScannerPage() {
                 />
               </div>
             </div>
+            {/* Bouton scanner caméra */}
+            <motion.button
+              type="button"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => setShowCamera(true)}
+              className="w-full flex items-center justify-center gap-2 bg-white/[0.04] border border-white/[0.08] text-gray-400 hover:text-white hover:border-yellow-500/30 py-3 rounded-xl transition-all text-sm mt-2"
+            >
+              <span>📷</span>
+              <span>Scanner avec la caméra</span>
+            </motion.button>
 
             {/* Montant */}
             <div className="space-y-2">
@@ -153,11 +172,10 @@ export default function ScannerPage() {
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     onClick={() => setTypeAchat(type.value)}
-                    className={`flex items-center gap-2 px-4 py-3 rounded-xl border transition-all text-sm ${
-                      typeAchat === type.value
+                    className={`flex items-center gap-2 px-4 py-3 rounded-xl border transition-all text-sm ${typeAchat === type.value
                         ? 'bg-yellow-400/10 border-yellow-400/40 text-yellow-400'
                         : 'bg-white/[0.03] border-white/[0.06] text-gray-500 hover:border-white/[0.12] hover:text-gray-300'
-                    }`}
+                      }`}
                   >
                     <span>{type.icon}</span>
                     <span className="font-medium">{type.value}</span>
@@ -252,6 +270,13 @@ export default function ScannerPage() {
           )}
         </AnimatePresence>
       </div>
+      {/* Scanner caméra */}
+      {showCamera && (
+        <QRScanner
+          onScan={handleCameraScan}
+          onClose={() => setShowCamera(false)}
+        />
+      )}
     </div>
   );
 }
