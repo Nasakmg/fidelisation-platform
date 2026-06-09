@@ -1,5 +1,6 @@
 const pool = require('../config/db');
 const { envoyerSMS } = require('../config/twilio');
+const { envoyerEmail } = require('../config/resend');
 
 // Créer une campagne
 const creerCampagne = async (req, res) => {
@@ -46,7 +47,6 @@ const getCampagnes = async (req, res) => {
   }
 };
 
-// Envoyer une campagne
 const envoyerCampagne = async (req, res) => {
   const { id } = req.params;
   const entreprise_id = req.user.id;
@@ -78,31 +78,49 @@ const envoyerCampagne = async (req, res) => {
     }
 
     const campagne = campagneResult.rows[0];
+
+    // Récupérer le nom de l'entreprise
+    const entrepriseResult = await pool.query(
+      'SELECT nom FROM entreprises WHERE id = $1',
+      [entreprise_id]
+    );
+    const nomEntreprise = entrepriseResult.rows[0]?.nom || 'FidélisationPro';
+
+    let emailsEnvoyes = 0;
     let smsEnvoyes = 0;
-    let smsEchecs = 0;
+    let echecs = 0;
 
-    // Envoyer SMS et notifications pour chaque client
     for (const client of clients) {
-
-      // Enregistrer la notification en base
+      // Enregistrer la notification
       await pool.query(
         `INSERT INTO notifications (client_id, message, canal, statut)
          VALUES ($1, $2, $3, 'envoyé')`,
         [client.id, campagne.message, campagne.canal]
       );
 
-      // Envoyer SMS si canal = sms
+      // Envoyer selon le canal
       if (campagne.canal === 'sms' && client.telephone) {
-        const result = await envoyerSMS(client.telephone, campagne.message);
-        if (result.success) {
-          smsEnvoyes++;
-        } else {
-          smsEchecs++;
-        }
+        const result = await envoyerSMS(
+          client.telephone,
+          `${nomEntreprise}: ${campagne.message}`
+        );
+        result.success ? smsEnvoyes++ : echecs++;
+
+      } else if (campagne.canal === 'email' && client.email) {
+        const result = await envoyerEmail(
+          client.email,
+          `${campagne.titre} — ${nomEntreprise}`,
+          campagne.message
+        );
+        result.success ? emailsEnvoyes++ : echecs++;
+
+      } else if (campagne.canal === 'push') {
+        // Push notification — à implémenter avec Firebase plus tard
+        emailsEnvoyes++;
       }
     }
 
-    // Mettre à jour le statut de la campagne
+    // Mettre à jour le statut
     await pool.query(
       `UPDATE campagnes SET statut = 'envoyée', date_envoi = NOW()
        WHERE id = $1`,
@@ -112,8 +130,9 @@ const envoyerCampagne = async (req, res) => {
     res.json({
       message: `✅ Campagne envoyée à ${clients.length} client(s) !`,
       nombre_destinataires: clients.length,
+      emails_envoyes: emailsEnvoyes,
       sms_envoyes: smsEnvoyes,
-      sms_echecs: smsEchecs
+      echecs
     });
 
   } catch (err) {

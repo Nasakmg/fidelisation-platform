@@ -4,10 +4,17 @@ const path = require('path');
 
 const ISSUER_ID = process.env.GOOGLE_WALLET_ISSUER_ID;
 const CLASS_ID = `${ISSUER_ID}.fidelisation_card`;
-const SERVICE_ACCOUNT_FILE = path.join(__dirname, '../../', process.env.GOOGLE_SERVICE_ACCOUNT_FILE);
 
+// Vérifier si le fichier de service account existe
+const SERVICE_ACCOUNT_FILE = process.env.GOOGLE_SERVICE_ACCOUNT_FILE
+  ? path.join(__dirname, '../../', process.env.GOOGLE_SERVICE_ACCOUNT_FILE)
+  : null;
 // Créer la classe de carte (à appeler une seule fois)
 const creerClasseCarte = async () => {
+  if (!SERVICE_ACCOUNT_FILE) {
+    console.log('ℹ️ Google Wallet non configuré sur ce serveur');
+    return;
+  }
   try {
     const auth = new GoogleAuth({
       keyFile: SERVICE_ACCOUNT_FILE,
@@ -53,6 +60,9 @@ const creerClasseCarte = async () => {
 
 // Générer un lien Google Wallet pour un client
 const genererLienWallet = async (client) => {
+  if (!SERVICE_ACCOUNT_FILE) {
+    throw new Error('Google Wallet non configuré');
+  }
   try {
     const auth = new GoogleAuth({
       keyFile: SERVICE_ACCOUNT_FILE,
