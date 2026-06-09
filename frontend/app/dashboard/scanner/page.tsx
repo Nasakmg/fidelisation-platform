@@ -23,10 +23,18 @@ export default function ScannerPage() {
   const QRScanner = dynamic(() => import('./QRScanner'), { ssr: false });
   const [showCamera, setShowCamera] = useState(false);
   const handleCameraScan = (result: string) => {
-    setQrCode(result);
-    setShowCamera(false);
-  };
-
+  // Nettoyer le résultat (parfois il y a des espaces)
+  const qrNettoye = result.trim().toUpperCase();
+  setQrCode(qrNettoye);
+  setShowCamera(false);
+  // Forcer la mise à jour
+  setTimeout(() => {
+    const input = document.querySelector('input[placeholder="USR-XXXXXXXXXX"]') as HTMLInputElement;
+    if (input) {
+      input.value = qrNettoye;
+    }
+  }, 100);
+};
   const typesAchat = [
     { value: 'Vêtements', icon: '👗' },
     { value: 'Alimentation', icon: '🛒' },

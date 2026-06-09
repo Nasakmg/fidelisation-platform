@@ -11,11 +11,14 @@ import {
 import {
   Users, ShoppingBag, TrendingUp, Star,
   QrCode, Megaphone, LogOut, Sparkles,
-  ArrowUpRight, Bell, Settings, ChevronRight
+  ArrowUpRight, Bell, Settings, ChevronRight,
+  Menu, X
 } from 'lucide-react';
 
 const Sidebar = ({ entreprise, onLogout }: any) => {
   const router = useRouter();
+  const [open, setOpen] = useState(false);
+
   const navItems = [
     { icon: TrendingUp, label: 'Dashboard', path: '/dashboard', active: true },
     { icon: QrCode, label: 'Scanner', path: '/dashboard/scanner' },
@@ -25,64 +28,129 @@ const Sidebar = ({ entreprise, onLogout }: any) => {
   ];
 
   return (
-    <div className="fixed left-0 top-0 h-full w-64 bg-[#0d0d0d] border-r border-white/[0.06] flex flex-col z-50">
-      {/* Logo */}
-      <div className="p-6 border-b border-white/[0.06]">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-lg flex items-center justify-center">
-            <Sparkles size={16} className="text-black" />
+    <>
+      {/* Mobile navbar */}
+      <div className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-[#0d0d0d] border-b border-white/[0.06] px-4 py-3 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-lg flex items-center justify-center">
+            <Sparkles size={14} className="text-black" />
           </div>
-          <div>
-            <p className="text-white font-bold text-sm">FidélisationPro</p>
-            <p className="text-gray-600 text-xs">Espace Entreprise</p>
-          </div>
+          <span className="text-white font-bold text-sm">FidélisationPro</span>
         </div>
-      </div>
-
-      {/* Entreprise info */}
-      <div className="p-4 mx-3 mt-4 bg-white/[0.03] rounded-xl border border-white/[0.06]">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 bg-gradient-to-br from-yellow-400/20 to-yellow-600/20 rounded-lg flex items-center justify-center">
-            <span className="text-yellow-400 font-bold text-sm">{entreprise?.nom?.[0]}</span>
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-white text-sm font-medium truncate">{entreprise?.nom}</p>
-            <p className="text-gray-600 text-xs truncate">{entreprise?.secteur}</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Nav */}
-      <nav className="flex-1 p-3 mt-2">
-        {navItems.map((item, i) => (
-          <motion.button
-            key={i}
-            whileHover={{ x: 4 }}
-            onClick={() => router.push(item.path)}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl mb-1 transition-all text-left ${
-              item.active
-                ? 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20'
-                : 'text-gray-500 hover:text-gray-300 hover:bg-white/[0.04]'
-            }`}
-          >
-            <item.icon size={18} />
-            <span className="text-sm font-medium">{item.label}</span>
-            {item.active && <ChevronRight size={14} className="ml-auto" />}
-          </motion.button>
-        ))}
-      </nav>
-
-      {/* Logout */}
-      <div className="p-3 border-t border-white/[0.06]">
         <button
-          onClick={onLogout}
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-gray-600 hover:text-red-400 hover:bg-red-500/5 transition-all"
+          onClick={() => setOpen(!open)}
+          className="text-gray-400 hover:text-white transition-colors"
         >
-          <LogOut size={18} />
-          <span className="text-sm font-medium">Déconnexion</span>
+          {open ? <X size={24} /> : <Menu size={24} />}
         </button>
       </div>
-    </div>
+
+      {/* Mobile menu overlay */}
+      {open && (
+        <div
+          className="lg:hidden fixed inset-0 bg-black/50 z-40"
+          onClick={() => setOpen(false)}
+        />
+      )}
+
+      {/* Mobile sidebar */}
+      <div className={`lg:hidden fixed top-0 left-0 h-full w-72 bg-[#0d0d0d] border-r border-white/[0.06] z-50 transform transition-transform duration-300 ${open ? 'translate-x-0' : '-translate-x-full'}`}>
+        <div className="p-6 border-b border-white/[0.06] mt-14">
+          <div className="flex items-center gap-3 p-3 bg-white/[0.03] rounded-xl border border-white/[0.06]">
+            <div className="w-9 h-9 bg-gradient-to-br from-yellow-400/20 to-yellow-600/20 rounded-lg flex items-center justify-center">
+              <span className="text-yellow-400 font-bold text-sm">{entreprise?.nom?.[0]}</span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-white text-sm font-medium truncate">{entreprise?.nom}</p>
+              <p className="text-gray-600 text-xs">{entreprise?.secteur}</p>
+            </div>
+          </div>
+        </div>
+
+        <nav className="p-3">
+          {navItems.map((item, i) => (
+            <button
+              key={i}
+              onClick={() => { router.push(item.path); setOpen(false); }}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl mb-1 transition-all text-left ${
+                item.active
+                  ? 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20'
+                  : 'text-gray-500 hover:text-gray-300 hover:bg-white/[0.04]'
+              }`}
+            >
+              <item.icon size={18} />
+              <span className="text-sm font-medium">{item.label}</span>
+            </button>
+          ))}
+        </nav>
+
+        <div className="absolute bottom-0 left-0 right-0 p-3 border-t border-white/[0.06]">
+          <button
+            onClick={onLogout}
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-gray-600 hover:text-red-400 hover:bg-red-500/5 transition-all"
+          >
+            <LogOut size={18} />
+            <span className="text-sm font-medium">Déconnexion</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Desktop sidebar */}
+      <div className="hidden lg:flex fixed left-0 top-0 h-full w-64 bg-[#0d0d0d] border-r border-white/[0.06] flex-col z-50">
+        <div className="p-6 border-b border-white/[0.06]">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-lg flex items-center justify-center">
+              <Sparkles size={16} className="text-black" />
+            </div>
+            <div>
+              <p className="text-white font-bold text-sm">FidélisationPro</p>
+              <p className="text-gray-600 text-xs">Espace Entreprise</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="p-4 mx-3 mt-4 bg-white/[0.03] rounded-xl border border-white/[0.06]">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 bg-gradient-to-br from-yellow-400/20 to-yellow-600/20 rounded-lg flex items-center justify-center">
+              <span className="text-yellow-400 font-bold text-sm">{entreprise?.nom?.[0]}</span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-white text-sm font-medium truncate">{entreprise?.nom}</p>
+              <p className="text-gray-600 text-xs truncate">{entreprise?.secteur}</p>
+            </div>
+          </div>
+        </div>
+
+        <nav className="flex-1 p-3 mt-2">
+          {navItems.map((item, i) => (
+            <motion.button
+              key={i}
+              whileHover={{ x: 4 }}
+              onClick={() => router.push(item.path)}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl mb-1 transition-all text-left ${
+                item.active
+                  ? 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20'
+                  : 'text-gray-500 hover:text-gray-300 hover:bg-white/[0.04]'
+              }`}
+            >
+              <item.icon size={18} />
+              <span className="text-sm font-medium">{item.label}</span>
+              {item.active && <ChevronRight size={14} className="ml-auto" />}
+            </motion.button>
+          ))}
+        </nav>
+
+        <div className="p-3 border-t border-white/[0.06]">
+          <button
+            onClick={onLogout}
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-gray-600 hover:text-red-400 hover:bg-red-500/5 transition-all"
+          >
+            <LogOut size={18} />
+            <span className="text-sm font-medium">Déconnexion</span>
+          </button>
+        </div>
+      </div>
+    </>
   );
 };
 
@@ -163,7 +231,7 @@ export default function DashboardPage() {
       <Sidebar entreprise={entreprise} onLogout={handleLogout} />
 
       {/* Main content */}
-      <div className="ml-64 p-8">
+      <div className="lg:ml-64 pt-16 lg:pt-0 p-4 lg:p-8">
 
         {/* Header */}
         <motion.div
