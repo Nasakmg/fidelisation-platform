@@ -69,16 +69,25 @@ export default function VendeurPage() {
     setShowCamera(true);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment' }
+        video: {
+          facingMode: { ideal: 'environment' },
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        }
       });
-      const video = document.getElementById('camera-video') as HTMLVideoElement;
-      if (video) {
-        video.srcObject = stream;
-        video.play();
-        scanQRFromVideo(video, stream);
-      }
+
+      setTimeout(() => {
+        const video = document.getElementById('camera-video') as HTMLVideoElement;
+        if (video) {
+          video.srcObject = stream;
+          video.play();
+          scanQRFromVideo(video, stream);
+        }
+      }, 500);
+
     } catch (err) {
-      setErreurScan('❌ Impossible d\'accéder à la caméra');
+      console.error(err);
+      setErreurScan('❌ Impossible d\'accéder à la caméra. Vérifiez les permissions.');
       setShowCamera(false);
     }
   };
@@ -86,34 +95,42 @@ export default function VendeurPage() {
   const scanQRFromVideo = (video: HTMLVideoElement, stream: MediaStream) => {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
+    let scanning = true;
 
-    const scan = async () => {
-      if (!showCamera) {
-        stream.getTracks().forEach(t => t.stop());
-        return;
-      }
-      if (video.readyState === video.HAVE_ENOUGH_DATA) {
+    const scan = () => {
+      if (!scanning) return;
+
+      if (video.readyState === video.HAVE_ENOUGH_DATA && video.videoWidth > 0) {
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
         ctx?.drawImage(video, 0, 0);
 
-        try {
+        const imageData = ctx?.getImageData(0, 0, canvas.width, canvas.height);
+
+        if (imageData) {
           // @ts-ignore
-          const barcodeDetector = new BarcodeDetector({ formats: ['qr_code'] });
-          const codes = await barcodeDetector.detect(canvas);
-          if (codes.length > 0) {
-            const result = codes[0].rawValue.trim().toUpperCase();
-            setQrCode(result);
-            stream.getTracks().forEach(t => t.stop());
-            setShowCamera(false);
-            return;
-          }
-        } catch (err) {
-          // BarcodeDetector non supporté
+          import('jsqr').then(({ default: jsQR }) => {
+            const code = jsQR(imageData.data, imageData.width, imageData.height, {
+              inversionAttempts: 'dontInvert'
+            });
+
+            if (code) {
+              scanning = false;
+              const result = code.data.trim().toUpperCase();
+              setQrCode(result);
+              stream.getTracks().forEach(t => t.stop());
+              setShowCamera(false);
+              return;
+            }
+          });
         }
       }
-      requestAnimationFrame(scan);
+
+      if (scanning) {
+        requestAnimationFrame(scan);
+      }
     };
+
     requestAnimationFrame(scan);
   };
 
@@ -121,6 +138,7 @@ export default function VendeurPage() {
     const video = document.getElementById('camera-video') as HTMLVideoElement;
     if (video?.srcObject) {
       (video.srcObject as MediaStream).getTracks().forEach(t => t.stop());
+      video.srcObject = null;
     }
     setShowCamera(false);
   };
@@ -341,11 +359,10 @@ export default function VendeurPage() {
                       key={type.value}
                       type="button"
                       onClick={() => setTypeAchat(type.value)}
-                      className={`flex flex-col items-center gap-1 py-3 rounded-xl border transition-all text-xs ${
-                        typeAchat === type.value
+                      className={`flex flex-col items-center gap-1 py-3 rounded-xl border transition-all text-xs ${typeAchat === type.value
                           ? 'bg-yellow-400/10 border-yellow-400/40 text-yellow-400'
                           : 'bg-white/[0.03] border-white/[0.06] text-gray-500'
-                      }`}
+                        }`}
                     >
                       <span className="text-lg">{type.emoji}</span>
                       <span>{type.value}</span>
