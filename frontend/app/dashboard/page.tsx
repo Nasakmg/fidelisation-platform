@@ -10,7 +10,7 @@ import {
 } from 'recharts';
 import {
   Users, ShoppingBag, TrendingUp, Star,
-  QrCode, Megaphone, LogOut, Sparkles,
+  QrCode, Megaphone, LogOut, Sparkles, Crown,
   ArrowUpRight, Bell, Settings, ChevronRight,
   Menu, X
 } from 'lucide-react';
@@ -25,6 +25,7 @@ const Sidebar = ({ entreprise, onLogout }: any) => {
     { icon: Users, label: 'Clients', path: '/dashboard/clients' },
     { icon: Megaphone, label: 'Campagnes', path: '/dashboard/campagnes' },
     { icon: Settings, label: 'Paramètres', path: '/dashboard/parametres' },
+    { icon: Crown, label: 'Abonnement', path: '/dashboard/abonnement' },
   ];
 
   return (

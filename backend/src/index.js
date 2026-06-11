@@ -10,6 +10,7 @@ const dashboardRoutes = require('./routes/dashboardRoutes');
 const campagneRoutes = require('./routes/campagneRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const { creerClasseCarte } = require('./config/googleWallet');
+const abonnementRoutes = require('./routes/abonnementRoutes');
 
 
 
@@ -40,5 +41,6 @@ app.use('/api/campagnes', campagneRoutes);
 
 app.use('/api/admin', adminRoutes);
 
+app.use('/api/abonnements', abonnementRoutes);
 
 creerClasseCarte();
