@@ -6,7 +6,8 @@
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
     "migrate": "node src/config/migrations.js",
-    "migrate:abonnements": "node src/config/migrations_abonnements.js"
+    "migrate:abonnements": "node src/config/migrations_abonnements.js",
+    "migrate:statut": "node src/config/migration_statut.js"
   },
   "keywords": [],
   "author": "",

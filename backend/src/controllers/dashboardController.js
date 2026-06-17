@@ -123,29 +123,30 @@ const getPassagesQuotidiens = async (req, res) => {
   }
 };
 
-// Historique et traçabilité complets
 const getHistoriqueComplet = async (req, res) => {
   const entreprise_id = req.user.id;
-  const { page = 1, limit = 20, client_id, date_debut, date_fin } = req.query;
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 20;
+  const client_id = req.query.client_id;
+  const date_debut = req.query.date_debut;
+  const date_fin = req.query.date_fin;
   const offset = (page - 1) * limit;
 
   try {
     let whereClause = 'WHERE t.entreprise_id = $1';
-      const params = [entreprise_id];
-      let paramIndex = 2;
+    const params = [entreprise_id];
+    let paramIndex = 2;
 
     if (client_id) {
       whereClause += ` AND t.client_id = $${paramIndex}`;
       params.push(client_id);
       paramIndex++;
     }
-
     if (date_debut) {
       whereClause += ` AND DATE(t.created_at) >= $${paramIndex}`;
       params.push(date_debut);
       paramIndex++;
     }
-
     if (date_fin) {
       whereClause += ` AND DATE(t.created_at) <= $${paramIndex}`;
       params.push(date_fin);
@@ -153,18 +154,8 @@ const getHistoriqueComplet = async (req, res) => {
     }
 
     const result = await pool.query(
-      `SELECT 
-        t.id,
-        t.montant,
-        t.points_gagnes,
-        t.type_achat,
-        t.created_at,
-        c.nom,
-        c.prenom,
-        c.telephone,
-        c.email,
-        c.qr_code,
-        c.points_total
+      `SELECT t.id, t.montant, t.points_gagnes, t.type_achat, t.created_at,
+              c.nom, c.prenom, c.telephone, c.email, c.qr_code, c.points_total
        FROM transactions t
        JOIN clients c ON t.client_id = c.id
        ${whereClause}
@@ -181,7 +172,8 @@ const getHistoriqueComplet = async (req, res) => {
     res.json({
       transactions: result.rows,
       total: parseInt(total.rows[0].count),
-      page: parseInt(page, 10)
+      page,
+      pages: Math.ceil(parseInt(total.rows[0].count) / limit)
     });
 
   } catch (err) {
@@ -213,10 +205,9 @@ const getQRCodeEntreprise = async (req, res) => {
   }
 };
 
-module.exports = { 
+module.exports = {
   getDashboardEntreprise,
   getPassagesQuotidiens,
   getHistoriqueComplet,
   getQRCodeEntreprise
 };
-module.exports = { getDashboardEntreprise };
