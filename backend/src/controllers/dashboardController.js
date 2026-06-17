@@ -79,4 +79,144 @@ const getDashboardEntreprise = async (req, res) => {
   }
 };
 
+
+
+// Passages quotidiens des clients
+const getPassagesQuotidiens = async (req, res) => {
+  const entreprise_id = req.user.id;
+
+  try {
+    const result = await pool.query(
+      `SELECT 
+        DATE(t.created_at) as date,
+        COUNT(*) as nombre_passages,
+        COUNT(DISTINCT t.client_id) as clients_uniques,
+        SUM(t.montant) as total_montant,
+        SUM(t.points_gagnes) as total_points
+       FROM transactions t
+       WHERE t.entreprise_id = $1
+       AND t.created_at >= NOW() - INTERVAL '30 days'
+       GROUP BY DATE(t.created_at)
+       ORDER BY date DESC`,
+      [entreprise_id]
+    );
+
+    // Passages aujourd'hui
+    const aujourdhui = await pool.query(
+      `SELECT 
+        COUNT(*) as passages_aujourdhui,
+        COUNT(DISTINCT client_id) as clients_aujourdhui,
+        COALESCE(SUM(montant), 0) as montant_aujourdhui
+       FROM transactions
+       WHERE entreprise_id = $1
+       AND DATE(created_at) = CURRENT_DATE`,
+      [entreprise_id]
+    );
+
+    res.json({
+      aujourdhui: aujourdhui.rows[0],
+      historique_30_jours: result.rows
+    });
+
+  } catch (err) {
+    res.status(500).json({ message: '❌ Erreur serveur', error: err.message });
+  }
+};
+
+// Historique et traçabilité complets
+const getHistoriqueComplet = async (req, res) => {
+  const entreprise_id = req.user.id;
+  const { page = 1, limit = 20, client_id, date_debut, date_fin } = req.query;
+  const offset = (page - 1) * limit;
+
+  try {
+    let whereClause = 'WHERE t.entreprise_id = $1';
+      const params = [entreprise_id];
+      let paramIndex = 2;
+
+    if (client_id) {
+      whereClause += ` AND t.client_id = $${paramIndex}`;
+      params.push(client_id);
+      paramIndex++;
+    }
+
+    if (date_debut) {
+      whereClause += ` AND DATE(t.created_at) >= $${paramIndex}`;
+      params.push(date_debut);
+      paramIndex++;
+    }
+
+    if (date_fin) {
+      whereClause += ` AND DATE(t.created_at) <= $${paramIndex}`;
+      params.push(date_fin);
+      paramIndex++;
+    }
+
+    const result = await pool.query(
+      `SELECT 
+        t.id,
+        t.montant,
+        t.points_gagnes,
+        t.type_achat,
+        t.created_at,
+        c.nom,
+        c.prenom,
+        c.telephone,
+        c.email,
+        c.qr_code,
+        c.points_total
+       FROM transactions t
+       JOIN clients c ON t.client_id = c.id
+       ${whereClause}
+       ORDER BY t.created_at DESC
+       LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
+      [...params, limit, offset]
+    );
+
+    const total = await pool.query(
+      `SELECT COUNT(*) FROM transactions t ${whereClause}`,
+      params
+    );
+
+    res.json({
+      transactions: result.rows,
+      total: parseInt(total.rows[0].count),
+      page: parseInt(page, 10)
+    });
+
+  } catch (err) {
+    res.status(500).json({ message: '❌ Erreur serveur', error: err.message });
+  }
+};
+
+// QR Code de l'entreprise
+const getQRCodeEntreprise = async (req, res) => {
+  const entreprise_id = req.user.id;
+
+  try {
+    const result = await pool.query(
+      'SELECT id, nom, secteur, adresse FROM entreprises WHERE id = $1',
+      [entreprise_id]
+    );
+
+    const entreprise = result.rows[0];
+    const qr_code = `ENT-${entreprise_id}-${entreprise.nom.replace(/\s/g, '').toUpperCase()}`;
+
+    res.json({
+      qr_code,
+      entreprise: entreprise.nom,
+      secteur: entreprise.secteur
+    });
+
+  } catch (err) {
+    res.status(500).json({ message: '❌ Erreur serveur', error: err.message });
+  }
+};
+
+module.exports = { 
+  getDashboardEntreprise,
+  getPassagesQuotidiens,
+  getHistoriqueComplet,
+  getQRCodeEntreprise
+};
 module.exports = { getDashboardEntreprise };

@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import { useAuth } from './context/AuthContext';
+import { TrendingUp, QrCode, Users, Calendar, ShoppingBag, Megaphone, Crown, Settings } from 'lucide-react';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -11,6 +12,17 @@ export default function LoginPage() {
   const [chargement, setChargement] = useState(false);
   const { login } = useAuth();
   const router = useRouter();
+  const navItems = [
+  { icon: TrendingUp, label: 'Dashboard', path: '/dashboard', active: true },
+  { icon: QrCode, label: 'Scanner', path: '/dashboard/scanner' },
+  { icon: Users, label: 'Clients', path: '/dashboard/clients' },
+  { icon: Calendar, label: 'Passages', path: '/dashboard/passages' },
+  { icon: ShoppingBag, label: 'Historique', path: '/dashboard/historique' },
+  { icon: QrCode, label: 'Mon QR Code', path: '/dashboard/qrcode' },
+  { icon: Megaphone, label: 'Campagnes', path: '/dashboard/campagnes' },
+  { icon: Crown, label: 'Abonnement', path: '/dashboard/abonnement' },
+  { icon: Settings, label: 'Paramètres', path: '/dashboard/parametres' },
+];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
