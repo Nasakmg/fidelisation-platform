@@ -19,17 +19,17 @@ const Sidebar = ({ entreprise, onLogout }: any) => {
   const router = useRouter();
   const [open, setOpen] = useState(false);
 
-const navItems = [
-  { icon: TrendingUp, label: 'Dashboard', path: '/dashboard', active: true },
-  { icon: QrCode, label: 'Scanner', path: '/dashboard/scanner' },
-  { icon: Users, label: 'Clients', path: '/dashboard/clients' },
-  { icon: Calendar, label: 'Passages', path: '/dashboard/passages' },
-  { icon: ShoppingBag, label: 'Historique', path: '/dashboard/historique' },
-  { icon: QrCode, label: 'Mon QR Code', path: '/dashboard/qrcode' },
-  { icon: Megaphone, label: 'Campagnes', path: '/dashboard/campagnes' },
-  { icon: Crown, label: 'Abonnement', path: '/dashboard/abonnement' },
-  { icon: Settings, label: 'Paramètres', path: '/dashboard/parametres' },
-];
+  const navItems = [
+    { icon: TrendingUp, label: 'Dashboard', path: '/dashboard', active: true },
+    { icon: QrCode, label: 'Scanner', path: '/dashboard/scanner' },
+    { icon: Users, label: 'Clients', path: '/dashboard/clients' },
+    { icon: Calendar, label: 'Passages', path: '/dashboard/passages' },
+    { icon: ShoppingBag, label: 'Historique', path: '/dashboard/historique' },
+    { icon: QrCode, label: 'Mon QR Code', path: '/dashboard/qrcode' },
+    { icon: Megaphone, label: 'Campagnes', path: '/dashboard/campagnes' },
+    { icon: Crown, label: 'Abonnement', path: '/dashboard/abonnement' },
+    { icon: Settings, label: 'Paramètres', path: '/dashboard/parametres' },
+  ];
 
   return (
     <>
@@ -70,11 +70,10 @@ const navItems = [
             <button
               key={i}
               onClick={() => { router.push(item.path); setOpen(false); }}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl mb-1 transition-all text-left ${
-                item.active
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl mb-1 transition-all text-left ${item.active
                   ? 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20'
                   : 'text-gray-500 hover:text-gray-300 hover:bg-white/[0.04]'
-              }`}
+                }`}
             >
               <item.icon size={18} />
               <span className="text-sm font-medium">{item.label}</span>
@@ -124,11 +123,10 @@ const navItems = [
               key={i}
               whileHover={{ x: 4 }}
               onClick={() => router.push(item.path)}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl mb-1 transition-all text-left ${
-                item.active
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl mb-1 transition-all text-left ${item.active
                   ? 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20'
                   : 'text-gray-500 hover:text-gray-300 hover:bg-white/[0.04]'
-              }`}
+                }`}
             >
               <item.icon size={18} />
               <span className="text-sm font-medium">{item.label}</span>
@@ -227,7 +225,8 @@ export default function DashboardPage() {
     <div className="min-h-screen bg-[#080808]">
       <Sidebar entreprise={entreprise} onLogout={handleLogout} />
 
-      <div className="lg:ml-64 pt-16 lg:pt-0 p-8">
+      {/* Après */}
+      <div className="ml-64 p-8">
 
         <motion.div
           initial={{ opacity: 0, y: -20 }}
