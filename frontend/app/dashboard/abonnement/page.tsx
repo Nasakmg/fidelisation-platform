@@ -1,12 +1,12 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
 import { motion } from 'framer-motion';
-import { Crown, Check, ArrowLeft, Zap, Sparkles, AlertTriangle } from 'lucide-react';
+import { Crown, Check, ArrowLeft, Zap, AlertTriangle } from 'lucide-react';
 
-export default function AbonnementPage() {
+function AbonnementContent() {
   const { token } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -82,7 +82,10 @@ export default function AbonnementPage() {
 
       {/* Header */}
       <div className="border-b border-white/[0.06] px-6 py-4 flex items-center gap-4">
-        <button onClick={() => router.push('/dashboard')} className="flex items-center gap-2 text-gray-500 hover:text-white transition-colors">
+        <button
+          onClick={() => router.push('/dashboard')}
+          className="flex items-center gap-2 text-gray-500 hover:text-white transition-colors"
+        >
           <ArrowLeft size={18} />
           <span className="text-sm">Retour</span>
         </button>
@@ -162,7 +165,6 @@ export default function AbonnementPage() {
             </div>
           </div>
 
-          {/* Barre de progression trial */}
           {abonnement?.statut === 'trial' && (
             <div className="mt-4">
               <div className="flex justify-between text-xs text-gray-600 mb-2">
@@ -249,7 +251,6 @@ export default function AbonnementPage() {
           })}
         </div>
 
-        {/* Info paiement */}
         <div className="mt-6 bg-white/[0.02] border border-white/[0.06] rounded-xl p-4">
           <p className="text-gray-500 text-xs text-center">
             💳 Paiement sécurisé via CinetPay — Wave, Orange Money, MTN Money acceptés
@@ -257,5 +258,17 @@ export default function AbonnementPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function AbonnementPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-[#080808] flex items-center justify-center">
+        <div className="w-10 h-10 border-2 border-yellow-500/30 border-t-yellow-400 rounded-full animate-spin" />
+      </div>
+    }>
+      <AbonnementContent />
+    </Suspense>
   );
 }
