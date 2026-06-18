@@ -10,23 +10,26 @@ import {
 } from 'recharts';
 import {
   Users, ShoppingBag, TrendingUp, Star,
-  QrCode, Megaphone, LogOut, Sparkles, Crown,
+  QrCode, Megaphone, LogOut, Sparkles,
   ArrowUpRight, Bell, Settings, ChevronRight,
-  Menu, X
+  Menu, X, Calendar, Crown
 } from 'lucide-react';
 
 const Sidebar = ({ entreprise, onLogout }: any) => {
   const router = useRouter();
   const [open, setOpen] = useState(false);
 
-  const navItems = [
-    { icon: TrendingUp, label: 'Dashboard', path: '/dashboard', active: true },
-    { icon: QrCode, label: 'Scanner', path: '/dashboard/scanner' },
-    { icon: Users, label: 'Clients', path: '/dashboard/clients' },
-    { icon: Megaphone, label: 'Campagnes', path: '/dashboard/campagnes' },
-    { icon: Settings, label: 'Paramètres', path: '/dashboard/parametres' },
-    { icon: Crown, label: 'Abonnement', path: '/dashboard/abonnement' },
-  ];
+const navItems = [
+  { icon: TrendingUp, label: 'Dashboard', path: '/dashboard', active: true },
+  { icon: QrCode, label: 'Scanner', path: '/dashboard/scanner' },
+  { icon: Users, label: 'Clients', path: '/dashboard/clients' },
+  { icon: Calendar, label: 'Passages', path: '/dashboard/passages' },
+  { icon: ShoppingBag, label: 'Historique', path: '/dashboard/historique' },
+  { icon: QrCode, label: 'Mon QR Code', path: '/dashboard/qrcode' },
+  { icon: Megaphone, label: 'Campagnes', path: '/dashboard/campagnes' },
+  { icon: Crown, label: 'Abonnement', path: '/dashboard/abonnement' },
+  { icon: Settings, label: 'Paramètres', path: '/dashboard/parametres' },
+];
 
   return (
     <>
