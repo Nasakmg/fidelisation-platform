@@ -80,7 +80,8 @@ export default function QRCodeEntreprisePage() {
             <div className="bg-white p-6 rounded-2xl shadow-lg">
               {qrData && (
                 <QRCodeSVG
-                  value={qrData.qr_code}
+                  value={`https://fidelisation-platform.vercel.app/scan?boutique=${qrData?.qr_code}`}
+
                   size={220}
                   level="H"
                   includeMargin={false}
