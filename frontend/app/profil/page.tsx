@@ -5,6 +5,7 @@ import axios from 'axios';
 import { useClientAuth } from '../context/ClientAuthContext';
 import { motion } from 'framer-motion';
 import { QRCodeSVG } from 'qrcode.react';
+import { requestNotificationPermission } from '../firebase';
 import {
   LogOut, Star, Crown, Wallet,
   History, ChevronRight, Sparkles
@@ -18,12 +19,24 @@ export default function ProfilPage() {
   const [chargement, setChargement] = useState(true);
 
   useEffect(() => {
-    if (!clientToken) {
-      router.push('/client');
-      return;
+     if (!clientToken) { router.push('/client'); return; }
+  fetchProfil();
+  
+  // Demander permission notifications
+  requestNotificationPermission().then(async (fcmToken) => {
+    if (fcmToken && clientToken) {
+      try {
+        await axios.post(
+          `${process.env.NEXT_PUBLIC_API_URL}/api/clients/fcm-token`,
+          { token: fcmToken },
+          { headers: { Authorization: `Bearer ${clientToken}` } }
+        );
+      } catch (err) {
+        console.error(err);
+      }
     }
-    fetchProfil();
-  }, [clientToken]);
+  });
+}, [clientToken]);
 
   const fetchProfil = async () => {
     try {

@@ -1,6 +1,7 @@
 const pool = require('../config/db');
 const { envoyerSMS } = require('../config/twilio');
 const { envoyerEmail } = require('../config/resend');
+const { envoyerNotificationPush } = require('../config/firebaseAdmin');
 
 // Créer une campagne
 const creerCampagne = async (req, res) => {
@@ -72,6 +73,24 @@ const envoyerCampagne = async (req, res) => {
       'SELECT * FROM campagnes WHERE id = $1 AND entreprise_id = $2',
       [id, entreprise_id]
     );
+    if (campagne.canal === 'push') {
+      // Récupérer les tokens FCM des clients
+      const tokensResult = await pool.query(
+        `SELECT DISTINCT ft.token 
+     FROM fcm_tokens ft
+     WHERE ft.client_id = $1`,
+        [client.id]
+      );
+
+      const tokens = tokensResult.rows.map(r => r.token);
+      if (tokens.length > 0) {
+        await envoyerNotificationPush(
+          tokens,
+          campagne.titre,
+          campagne.message
+        );
+      }
+    }
 
     if (campagneResult.rows.length === 0) {
       return res.status(404).json({ message: '❌ Campagne introuvable' });

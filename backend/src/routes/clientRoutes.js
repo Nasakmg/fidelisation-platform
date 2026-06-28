@@ -24,4 +24,20 @@ router.get('/wallet', verifyToken, async (req, res) => {
   }
 });
 
+// Sauvegarder token FCM
+router.post('/fcm-token', verifyToken, async (req, res) => {
+  const { token } = req.body;
+  const client_id = req.user.id;
+  try {
+    await pool.query(
+      `INSERT INTO fcm_tokens (client_id, token) 
+       VALUES ($1, $2) 
+       ON CONFLICT (client_id, token) DO NOTHING`,
+      [client_id, token]
+    );
+    res.json({ message: '✅ Token FCM sauvegardé' });
+  } catch (err) {
+    res.status(500).json({ message: '❌ Erreur', error: err.message });
+  }
+});
 module.exports = router;
