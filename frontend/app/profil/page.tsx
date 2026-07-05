@@ -5,7 +5,7 @@ import axios from 'axios';
 import { useClientAuth } from '../context/ClientAuthContext';
 import { motion } from 'framer-motion';
 import { QRCodeSVG } from 'qrcode.react';
-import { requestNotificationPermission } from '../firebase';
+
 import {
   LogOut, Star, Crown, Wallet,
   History, ChevronRight, Sparkles
@@ -18,26 +18,29 @@ export default function ProfilPage() {
   const [walletLoading, setWalletLoading] = useState(false);
   const [chargement, setChargement] = useState(true);
 
-  useEffect(() => {
-     if (!clientToken) { router.push('/client'); return; }
+useEffect(() => {
+  if (!clientToken) { router.push('/client'); return; }
   fetchProfil();
   
-  // Demander permission notifications
-  requestNotificationPermission().then(async (fcmToken) => {
-    if (fcmToken && clientToken) {
-      try {
-        await axios.post(
-          `${process.env.NEXT_PUBLIC_API_URL}/api/clients/fcm-token`,
-          { token: fcmToken },
-          { headers: { Authorization: `Bearer ${clientToken}` } }
-        );
-      } catch (err) {
-        console.error(err);
-      }
-    }
-  });
+  // Firebase uniquement côté client
+  if (typeof window !== 'undefined') {
+    import('../firebase').then(({ requestNotificationPermission }) => {
+      requestNotificationPermission().then(async (fcmToken) => {
+        if (fcmToken && clientToken) {
+          try {
+            await axios.post(
+              `${process.env.NEXT_PUBLIC_API_URL}/api/clients/fcm-token`,
+              { token: fcmToken },
+              { headers: { Authorization: `Bearer ${clientToken}` } }
+            );
+          } catch (err) {
+            console.error(err);
+          }
+        }
+      });
+    });
+  }
 }, [clientToken]);
-
   const fetchProfil = async () => {
     try {
       const response = await axios.get(
