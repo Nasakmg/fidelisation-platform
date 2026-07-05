@@ -120,7 +120,7 @@ function ScanContent() {
             <div className="w-9 h-9 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-xl flex items-center justify-center">
               <Sparkles size={16} className="text-black" />
             </div>
-            <span className="text-white font-bold text-lg">FidélisationPro</span>
+            <span className="text-white font-bold text-lg">E-Wallet</span>
           </div>
 
           {boutique && (

@@ -5,7 +5,7 @@ export default function App() {
   return (
     <View style={styles.container}>
       <Text style={{ color: 'white', fontSize: 24, fontWeight: 'bold' }}>
-        🎯 FidélisationPro
+        🎯 E-Wallet
       </Text>
       <Text style={{ color: '#EAB308', marginTop: 10 }}>
         App Mobile prête !

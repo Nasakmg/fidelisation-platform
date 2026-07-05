@@ -136,7 +136,7 @@ export default function AdminDashboard() {
           </div>
           <div>
             <p className="text-white font-bold text-sm">Panel Administration</p>
-            <p className="text-gray-600 text-xs">FidélisationPro</p>
+            <p className="text-gray-600 text-xs">E-Wallet</p>
           </div>
         </div>
         <button onClick={handleLogout} className="flex items-center gap-2 text-gray-600 hover:text-red-400 transition-colors text-sm">

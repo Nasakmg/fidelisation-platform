@@ -93,7 +93,7 @@ const initierPaiement = async (req, res) => {
         transaction_id,
         amount: montant,
         currency: 'XOF',
-        description: `Abonnement FidélisationPro - Plan ${plan.nom} (${frequence})`,
+        description: `Abonnement E-Wallet - Plan ${plan.nom} (${frequence})`,
         return_url: `${FRONTEND_URL}/dashboard/abonnement?success=true`,
         notify_url: `${process.env.BACKEND_URL}/api/abonnements/webhook`,
         customer_name: entreprise.nom,

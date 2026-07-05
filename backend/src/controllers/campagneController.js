@@ -103,7 +103,7 @@ const envoyerCampagne = async (req, res) => {
       'SELECT nom FROM entreprises WHERE id = $1',
       [entreprise_id]
     );
-    const nomEntreprise = entrepriseResult.rows[0]?.nom || 'FidélisationPro';
+    const nomEntreprise = entrepriseResult.rows[0]?.nom || 'E-Wallet';
 
     let emailsEnvoyes = 0;
     let smsEnvoyes = 0;

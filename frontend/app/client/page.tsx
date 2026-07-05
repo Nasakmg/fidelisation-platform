@@ -53,7 +53,7 @@ export default function ClientLoginPage() {
             <div className="w-9 h-9 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-xl flex items-center justify-center">
               <Sparkles size={16} className="text-black" />
             </div>
-            <span className="text-white font-bold text-lg">FidélisationPro</span>
+            <span className="text-white font-bold text-lg">E-Wallet</span>
           </div>
           <div className="w-16 h-16 bg-yellow-400/10 border border-yellow-400/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
             <UserCircle size={32} className="text-yellow-400" />

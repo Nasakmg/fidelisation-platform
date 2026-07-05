@@ -106,7 +106,7 @@ export default function ProfilPage() {
           <div className="w-8 h-8 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-lg flex items-center justify-center">
             <Sparkles size={14} className="text-black" />
           </div>
-          <span className="text-white font-bold">FidélisationPro</span>
+          <span className="text-white font-bold">E-Wallet</span>
         </div>
 
         <motion.div

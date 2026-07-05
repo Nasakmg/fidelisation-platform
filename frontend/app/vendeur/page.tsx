@@ -168,7 +168,7 @@ export default function VendeurPage() {
               <div className="w-10 h-10 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-xl flex items-center justify-center">
                 <Sparkles size={18} className="text-black" />
               </div>
-              <span className="text-white font-bold text-xl">FidélisationPro</span>
+              <span className="text-white font-bold text-xl">E-Wallet</span>
             </div>
             <h1 className="text-2xl font-bold text-white mb-1">Espace Vendeur</h1>
             <p className="text-gray-500 text-sm">Connectez-vous pour scanner</p>

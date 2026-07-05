@@ -39,7 +39,7 @@ const Sidebar = ({ entreprise, onLogout }: any) => {
           <div className="w-8 h-8 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-lg flex items-center justify-center">
             <Sparkles size={14} className="text-black" />
           </div>
-          <span className="text-white font-bold text-sm">FidélisationPro</span>
+          <span className="text-white font-bold text-sm">E-Wallet</span>
         </div>
         <button
           onClick={() => setOpen(!open)}
@@ -99,7 +99,7 @@ const Sidebar = ({ entreprise, onLogout }: any) => {
               <Sparkles size={16} className="text-black" />
             </div>
             <div>
-              <p className="text-white font-bold text-sm">FidélisationPro</p>
+              <p className="text-white font-bold text-sm">E-Wallet</p>
               <p className="text-gray-600 text-xs">Espace Entreprise</p>
             </div>
           </div>

@@ -5,7 +5,7 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 const envoyerEmail = async (destinataire, sujet, message) => {
   try {
     const result = await resend.emails.send({
-      from: 'FidélisationPro <onboarding@resend.dev>',
+      from: 'E-Wallet <onboarding@resend.dev>',
       to: destinataire,
       subject: sujet,
       html: `
@@ -23,7 +23,7 @@ const envoyerEmail = async (destinataire, sujet, message) => {
               <div style="display:inline-block;background:#EAB308;padding:12px 20px;border-radius:12px;margin-bottom:16px;">
                 <span style="font-size:24px;">🎯</span>
               </div>
-              <h1 style="color:#ffffff;font-size:24px;margin:0;">FidélisationPro</h1>
+              <h1 style="color:#ffffff;font-size:24px;margin:0;">E-Wallet</h1>
             </div>
 
             <!-- Content -->
@@ -44,7 +44,7 @@ const envoyerEmail = async (destinataire, sujet, message) => {
             <!-- Footer -->
             <div style="text-align:center;margin-top:24px;">
               <p style="color:#4b5563;font-size:12px;">
-                Vous recevez cet email car vous êtes membre FidélisationPro.
+                Vous recevez cet email car vous êtes membre E-Wallet.
               </p>
             </div>
           </div>

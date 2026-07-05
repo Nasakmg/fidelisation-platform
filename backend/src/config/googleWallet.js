@@ -26,7 +26,7 @@ const creerClasseCarte = async () => {
 
     const classeData = {
       id: CLASS_ID,
-      issuerName: 'FidélisationPro',
+      issuerName: 'E-Wallet',
       programName: 'Carte de Fidélité',
       programLogo: {
         sourceUri: {
@@ -102,7 +102,7 @@ const genererLienWallet = async (client) => {
       cardTitle: {
         defaultValue: {
           language: 'fr',
-          value: 'FidélisationPro'
+          value: 'E-Wallet'
         }
       },
       header: {

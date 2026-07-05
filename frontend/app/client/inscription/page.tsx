@@ -76,7 +76,7 @@ export default function ClientInscriptionPage() {
             <div className="w-9 h-9 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-xl flex items-center justify-center">
               <Sparkles size={16} className="text-black" />
             </div>
-            <span className="text-white font-bold text-lg">FidélisationPro</span>
+            <span className="text-white font-bold text-lg">E-Wallet</span>
           </div>
           <h1 className="text-2xl font-bold text-white mb-1">Créer mon compte</h1>
           <p className="text-gray-500 text-sm">Accédez à votre carte de fidélité</p>

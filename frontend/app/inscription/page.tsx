@@ -98,7 +98,7 @@ export default function InscriptionPage() {
             <div className="w-10 h-10 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-xl flex items-center justify-center">
               <Sparkles size={20} className="text-black" />
             </div>
-            <span className="text-white font-bold text-xl">FidélisationPro</span>
+            <span className="text-white font-bold text-xl">E-Wallet</span>
           </div>
         </div>
 
@@ -138,7 +138,7 @@ export default function InscriptionPage() {
             ))}
           </div>
           <p className="text-gray-300 text-sm mb-3">
-            "En 2 mois, nous avons fidélisé plus de 500 clients grâce à FidélisationPro."
+            "En 2 mois, nous avons fidélisé plus de 500 clients grâce à E-Wallet."
           </p>
           <p className="text-gray-600 text-xs">Moussa Sow — Restaurant Le Savoureux, Dakar</p>
         </div>
