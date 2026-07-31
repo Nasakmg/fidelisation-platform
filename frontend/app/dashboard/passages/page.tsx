@@ -3,11 +3,12 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
+import { formaterMontant } from '../../../utils/devise';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Users, ShoppingBag, TrendingUp, Calendar } from 'lucide-react';
 
 export default function PassagesPage() {
-  const { token } = useAuth();
+  const { token, entreprise } = useAuth();
   const router = useRouter();
   const [data, setData] = useState<any>(null);
   const [chargement, setChargement] = useState(true);
@@ -79,7 +80,7 @@ export default function PassagesPage() {
             {
               icon: TrendingUp,
               label: "Montant du jour",
-              value: `${parseInt(data?.aujourdhui?.montant_aujourdhui || 0).toLocaleString()} FCFA`,
+              value: formaterMontant(data?.aujourdhui?.montant_aujourdhui || 0, entreprise?.pays || 'Sénégal'),
               color: 'bg-yellow-500/10 text-yellow-400'
             },
           ].map((stat, i) => (
@@ -131,7 +132,7 @@ export default function PassagesPage() {
                   <div className="text-right">
                     <p className="text-white font-bold">{jour.nombre_passages} passages</p>
                     <p className="text-yellow-400 text-xs">
-                      {parseInt(jour.total_montant).toLocaleString()} FCFA
+                      {formaterMontant(jour.total_montant, entreprise?.pays || 'Sénégal')}
                     </p>
                   </div>
                 </motion.div>

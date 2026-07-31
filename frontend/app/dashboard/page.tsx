@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
+import { formaterMontant } from '../../utils/devise';
 import { motion } from 'framer-motion';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
@@ -171,12 +172,12 @@ const StatCard = ({ icon: Icon, label, value, sub, color, delay }: any) => (
   </motion.div>
 );
 
-const CustomTooltip = ({ active, payload, label }: any) => {
+const CustomTooltip = ({ active, payload, label, pays }: any) => {
   if (active && payload && payload.length) {
     return (
       <div className="bg-[#1a1a1a] border border-white/10 rounded-xl p-3">
         <p className="text-gray-400 text-xs mb-1">{label}</p>
-        <p className="text-white font-bold">{parseInt(payload[0].value).toLocaleString()} FCFA</p>
+        <p className="text-white font-bold">{formaterMontant(payload[0].value, pays)}</p>
       </div>
     );
   }
@@ -219,20 +220,6 @@ export default function DashboardPage() {
         </div>
       </div>
     );
-  }
-
-  function formaterMontant(arg0: any, arg1: any) {
-    const montant = typeof arg0 === 'number' ? arg0 : Number.parseFloat(String(arg0));
-    const pays = String(arg1 || '').trim().toLowerCase();
-
-    if (!Number.isFinite(montant)) return '0 FCFA';
-
-    const devise = pays.includes('france') || pays.includes('europe') ? '€' : 'FCFA';
-    const valeur = new Intl.NumberFormat('fr-FR', {
-      maximumFractionDigits: 0,
-    }).format(montant);
-
-    return `${valeur} ${devise}`;
   }
 
   return (
@@ -290,7 +277,7 @@ export default function DashboardPage() {
               </div>
               <div className="flex items-center gap-2 text-xs text-gray-600 bg-white/[0.04] px-3 py-1.5 rounded-lg">
                 <div className="w-2 h-2 bg-yellow-400 rounded-full" />
-                Montant FCFA
+                Montant {entreprise?.symbole_devise || 'FCFA'}
               </div>
             </div>
             {stats?.graphique_semaine?.length > 0 ? (
@@ -305,7 +292,7 @@ export default function DashboardPage() {
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
                   <XAxis dataKey="date" tickFormatter={(val) => new Date(val).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })} tick={{ fill: '#4b5563', fontSize: 11 }} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fill: '#4b5563', fontSize: 11 }} axisLine={false} tickLine={false} />
-                  <Tooltip content={<CustomTooltip />} />
+                  <Tooltip content={<CustomTooltip pays={entreprise?.pays || 'Sénégal'} />} />
                   <Area type="monotone" dataKey="total_montant" stroke="#EAB308" strokeWidth={2} fill="url(#colorMontant)" />
                 </AreaChart>
               </ResponsiveContainer>
@@ -382,7 +369,7 @@ export default function DashboardPage() {
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="text-white font-semibold">{parseFloat(t.montant).toLocaleString()} FCFA</p>
+                    <p className="text-white font-semibold">{formaterMontant(t.montant, entreprise?.pays || 'Sénégal')}</p>
                     <p className="text-green-400 text-xs">+{t.points_gagnes} pts</p>
                   </div>
                 </motion.div>

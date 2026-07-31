@@ -49,10 +49,15 @@ const inscrireEntreprise = async (req, res) => {
 // Connexion entreprise
 const connecterEntreprise = async (req, res) => {
   const { email, mot_de_passe } = req.body;
+  const emailNormalise = String(email || '').trim().toLowerCase();
 
   try {
+    if (!emailNormalise || !mot_de_passe) {
+      return res.status(400).json({ message: '❌ Email et mot de passe requis' });
+    }
+
     const result = await pool.query(
-      'SELECT * FROM entreprises WHERE email = $1', [email]
+      'SELECT * FROM entreprises WHERE LOWER(TRIM(email)) = $1', [emailNormalise]
     );
 
     if (result.rows.length === 0) {
@@ -80,7 +85,10 @@ const connecterEntreprise = async (req, res) => {
         nom: entreprise.nom,
         email: entreprise.email,
         secteur: entreprise.secteur,
-        plan_abonnement: entreprise.plan_abonnement
+        plan_abonnement: entreprise.plan_abonnement,
+        pays: entreprise.pays,
+        devise: entreprise.devise,
+        symbole_devise: entreprise.symbole_devise
       }
     });
 

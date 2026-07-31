@@ -3,11 +3,12 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
+import { formaterMontant } from '../../../utils/devise';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Search, Filter, ShoppingBag, Download } from 'lucide-react';
 
 export default function HistoriquePage() {
-  const { token } = useAuth();
+  const { token, entreprise } = useAuth();
   const router = useRouter();
   const [transactions, setTransactions] = useState<any[]>([]);
   const [total, setTotal] = useState(0);
@@ -171,7 +172,7 @@ export default function HistoriquePage() {
                       </span>
                     </td>
                     <td className="px-5 py-4">
-                      <p className="text-white font-semibold">{parseFloat(t.montant).toLocaleString()} FCFA</p>
+                      <p className="text-white font-semibold">{formaterMontant(t.montant, entreprise?.pays || 'Sénégal')}</p>
                     </td>
                     <td className="px-5 py-4">
                       <span className="text-green-400 font-medium">+{t.points_gagnes} pts</span>

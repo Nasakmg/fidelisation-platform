@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
-const { token, entreprise } = useAuth();
+import { calculerPoints } from '../../../utils/devise';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   QrCode, ArrowLeft, CheckCircle,
@@ -13,7 +13,7 @@ import {
 
 
 export default function ScannerPage() {
-  const { token } = useAuth();
+  const { token, entreprise } = useAuth();
   const router = useRouter();
   const [qrCode, setQrCode] = useState('');
   const [montant, setMontant] = useState('');
@@ -59,23 +59,6 @@ export default function ScannerPage() {
       setChargement(false);
     }
   };
-
-  function calculerPoints(montantAchat: number, pays: any): number {
-    if (!Number.isFinite(montantAchat) || montantAchat <= 0) {
-      return 0;
-    }
-
-    // One point is awarded for each 100 currency units.  Keep the country
-    // check explicit so currencies using the same decimal scale are handled
-    // consistently while still tolerating an absent or unknown country.
-    const paysNormalise = String(pays ?? '').trim().toLowerCase();
-    const taux = ['sénégal', 'senegal', 'côte d’ivoire', "côte d'ivoire", 'cote d ivoire', 'cameroun']
-      .includes(paysNormalise)
-      ? 100
-      : 100;
-
-    return Math.floor(montantAchat / taux);
-  }
 
   return (
     <div className="min-h-screen bg-[#080808]">

@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Mail, Lock, ArrowRight, Sparkles, QrCode, CheckCircle, X, Zap } from 'lucide-react';
+import { calculerPoints, getDevise } from '../../utils/devise';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
@@ -332,7 +333,9 @@ export default function VendeurPage() {
 
               {/* Montant */}
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Montant (FCFA)</label>
+                <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Montant ({entreprise?.symbole_devise || getDevise(entreprise?.pays || 'Sénégal').symbole})
+                </label>
                 <input
                   type="number"
                   value={montant}
@@ -345,7 +348,7 @@ export default function VendeurPage() {
                 {montant && (
                   <p className="text-yellow-400/70 text-xs flex items-center gap-1">
                     <Zap size={11} />
-                    {Math.floor(parseFloat(montant) / 100)} points seront ajoutés
+                    {calculerPoints(parseFloat(montant), entreprise?.pays || 'Sénégal')} points seront ajoutés
                   </p>
                 )}
               </div>
