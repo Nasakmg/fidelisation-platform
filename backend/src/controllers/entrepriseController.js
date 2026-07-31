@@ -4,7 +4,11 @@ const jwt = require('jsonwebtoken');
 
 // Inscription entreprise
 const inscrireEntreprise = async (req, res) => {
-  const { nom, email, telephone, mot_de_passe, secteur, adresse } = req.body;
+  const { nom, email, telephone, mot_de_passe, secteur, adresse, pays } = req.body;
+  
+  // Déterminer la devise selon le pays
+  const { getDevise } = require('../config/devises');
+  const deviseInfo = getDevise(pays || 'Sénégal');
 
   try {
     const existe = await pool.query(
@@ -14,16 +18,17 @@ const inscrireEntreprise = async (req, res) => {
       return res.status(400).json({ message: '❌ Email déjà utilisé' });
     }
 
-    const hash = await bcrypt.hash(mot_de_passe, 10);
+    const hash = await bcrypt.hash(String(mot_de_passe), 10);
 
     const result = await pool.query(
-      `INSERT INTO entreprises (nom, email, telephone, mot_de_passe, secteur, adresse)
-       VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, nom, email, secteur, plan_abonnement`,
-      [nom, email, telephone, hash, secteur, adresse]
+      `INSERT INTO entreprises (nom, email, telephone, mot_de_passe, secteur, adresse, pays, devise, symbole_devise)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) 
+       RETURNING id, nom, email, secteur, plan_abonnement, pays, devise, symbole_devise`,
+      [nom, email, telephone, hash, secteur, adresse, 
+       pays || 'Sénégal', deviseInfo.code, deviseInfo.symbole]
     );
 
     const entreprise = result.rows[0];
-
     const token = jwt.sign(
       { id: entreprise.id, role: 'entreprise' },
       process.env.JWT_SECRET,

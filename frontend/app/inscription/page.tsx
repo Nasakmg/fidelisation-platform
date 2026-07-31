@@ -5,14 +5,15 @@ import axios from 'axios';
 import { motion } from 'framer-motion';
 import {
   Building2, Mail, Phone, Lock,
-  MapPin, Briefcase, ArrowRight,
+  MapPin, Briefcase, ArrowRight, Globe,
   Sparkles, CheckCircle
 } from 'lucide-react';
 
 export default function InscriptionPage() {
   const [formData, setFormData] = useState({
-    nom: '', email: '', telephone: '',
-    mot_de_passe: '', secteur: '', adresse: ''
+     nom: '', email: '', telephone: '',
+  mot_de_passe: '', secteur: '', adresse: '',
+  pays: 'Sénégal' // valeur par défaut
   });
   const [erreur, setErreur] = useState('');
   const [succes, setSucces] = useState(false);
@@ -40,7 +41,19 @@ export default function InscriptionPage() {
       setChargement(false);
     }
   };
-
+  const pays = [
+    // Afrique de l'Ouest
+    'Sénégal', 'Côte d\'Ivoire', 'Mali', 'Burkina Faso',
+    'Niger', 'Bénin', 'Togo', 'Guinée-Bissau', 'Guinée', 'Mauritanie',
+    // Afrique Centrale
+    'Cameroun', 'Congo', 'Gabon', 'Tchad', 'Centrafrique',
+    // Afrique du Nord
+    'Maroc', 'Tunisie', 'Algérie',
+    // Europe
+    'France', 'Belgique', 'Suisse',
+    // Autre
+    'Autre'
+  ];
   const secteurs = [
     'Vêtements', 'Restauration', 'Épicerie',
     'Pharmacie', 'Électronique', 'Beauté & Cosmétiques',
@@ -195,6 +208,25 @@ export default function InscriptionPage() {
                   placeholder="contact@entreprise.com"
                   required
                 />
+              </div>
+            </div>
+
+            {/* Pays */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Pays</label>
+              <div className="relative">
+                <Globe size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600" />
+                <select
+                  name="pays"
+                  value={formData.pays}
+                  onChange={handleChange}
+                  className="w-full bg-white/[0.04] border border-white/[0.08] text-white rounded-xl pl-11 pr-4 py-3 focus:outline-none focus:border-yellow-500/50 transition-all text-sm appearance-none"
+                  required
+                >
+                  {pays.map((p) => (
+                    <option key={p} value={p} className="bg-[#111]">{p}</option>
+                  ))}
+                </select>
               </div>
             </div>
 

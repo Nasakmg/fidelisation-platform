@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
+const { token, entreprise } = useAuth();
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   QrCode, ArrowLeft, CheckCircle,
@@ -20,8 +21,8 @@ export default function ScannerPage() {
   const [resultat, setResultat] = useState<any>(null);
   const [erreur, setErreur] = useState('');
   const [chargement, setChargement] = useState(false);
-  
-  
+
+
 
   const typesAchat = [
     { value: 'Vêtements', icon: '👗' },
@@ -58,6 +59,23 @@ export default function ScannerPage() {
       setChargement(false);
     }
   };
+
+  function calculerPoints(montantAchat: number, pays: any): number {
+    if (!Number.isFinite(montantAchat) || montantAchat <= 0) {
+      return 0;
+    }
+
+    // One point is awarded for each 100 currency units.  Keep the country
+    // check explicit so currencies using the same decimal scale are handled
+    // consistently while still tolerating an absent or unknown country.
+    const paysNormalise = String(pays ?? '').trim().toLowerCase();
+    const taux = ['sénégal', 'senegal', 'côte d’ivoire', "côte d'ivoire", 'cote d ivoire', 'cameroun']
+      .includes(paysNormalise)
+      ? 100
+      : 100;
+
+    return Math.floor(montantAchat / taux);
+  }
 
   return (
     <div className="min-h-screen bg-[#080808]">
@@ -133,15 +151,15 @@ export default function ScannerPage() {
             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-400">Montant de l'achat</label>
               <div className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600 text-sm font-medium">FCFA</span>
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600 text-sm font-medium">
+                  {entreprise?.symbole_devise || 'FCFA'}
+                </span>
                 <input
                   type="number"
                   value={montant}
                   onChange={(e) => setMontant(e.target.value)}
-                  className="w-full bg-white/[0.04] border border-white/[0.08] text-white rounded-xl pl-16 pr-4 py-3.5 focus:outline-none focus:border-yellow-500/50 transition-all placeholder:text-gray-700 text-lg font-semibold"
+                  className="w-full bg-white/[0.04] border border-white/[0.08] text-white rounded-xl pl-20 pr-4 py-3.5..."
                   placeholder="0"
-                  min="0"
-                  required
                 />
               </div>
               {montant && (
@@ -151,7 +169,7 @@ export default function ScannerPage() {
                   className="text-yellow-400/70 text-xs flex items-center gap-1"
                 >
                   <Zap size={12} />
-                  {Math.floor(parseFloat(montant) / 100)} points seront ajoutés
+                  {calculerPoints(parseFloat(montant), entreprise?.pays || 'Sénégal')} points seront ajoutés
                 </motion.p>
               )}
             </div>
@@ -168,8 +186,8 @@ export default function ScannerPage() {
                     whileTap={{ scale: 0.98 }}
                     onClick={() => setTypeAchat(type.value)}
                     className={`flex items-center gap-2 px-4 py-3 rounded-xl border transition-all text-sm ${typeAchat === type.value
-                        ? 'bg-yellow-400/10 border-yellow-400/40 text-yellow-400'
-                        : 'bg-white/[0.03] border-white/[0.06] text-gray-500 hover:border-white/[0.12] hover:text-gray-300'
+                      ? 'bg-yellow-400/10 border-yellow-400/40 text-yellow-400'
+                      : 'bg-white/[0.03] border-white/[0.06] text-gray-500 hover:border-white/[0.12] hover:text-gray-300'
                       }`}
                   >
                     <span>{type.icon}</span>

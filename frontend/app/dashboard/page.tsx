@@ -221,6 +221,20 @@ export default function DashboardPage() {
     );
   }
 
+  function formaterMontant(arg0: any, arg1: any) {
+    const montant = typeof arg0 === 'number' ? arg0 : Number.parseFloat(String(arg0));
+    const pays = String(arg1 || '').trim().toLowerCase();
+
+    if (!Number.isFinite(montant)) return '0 FCFA';
+
+    const devise = pays.includes('france') || pays.includes('europe') ? '€' : 'FCFA';
+    const valeur = new Intl.NumberFormat('fr-FR', {
+      maximumFractionDigits: 0,
+    }).format(montant);
+
+    return `${valeur} ${devise}`;
+  }
+
   return (
     <div className="min-h-screen bg-[#080808]">
       <Sidebar entreprise={entreprise} onLogout={handleLogout} />
@@ -258,7 +272,7 @@ export default function DashboardPage() {
         <div className="grid grid-cols-4 gap-4 mb-8">
           <StatCard icon={Users} label="Clients uniques" value={stats?.statistiques?.total_clients || 0} color="bg-blue-500/10 text-blue-400" delay={0.1} />
           <StatCard icon={ShoppingBag} label="Transactions" value={stats?.statistiques?.total_transactions || 0} color="bg-green-500/10 text-green-400" delay={0.2} />
-          <StatCard icon={TrendingUp} label="Chiffre d'affaires" value={`${(stats?.statistiques?.chiffre_affaires || 0).toLocaleString()}`} sub="FCFA générés" color="bg-yellow-500/10 text-yellow-400" delay={0.3} />
+          <StatCard icon={TrendingUp} label="Chiffre d'affaires" value={formaterMontant(stats?.statistiques?.chiffre_affaires || 0, entreprise?.pays || 'Sénégal')} />
           <StatCard icon={Star} label="Points distribués" value={stats?.statistiques?.total_points_distribues || 0} color="bg-purple-500/10 text-purple-400" delay={0.4} />
         </div>
 

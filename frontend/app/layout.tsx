@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import { AuthProvider } from './context/AuthContext';
@@ -10,17 +10,18 @@ export const metadata: Metadata = {
   title: 'E-Wallet',
   description: 'Votre carte de fidélité digitale',
   manifest: '/manifest.json',
-  themeColor: '#EAB308',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
     title: 'E-Wallet',
   },
-  viewport: {
-    width: 'device-width',
-    initialScale: 1,
-    maximumScale: 1,
-  },
+};
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  themeColor: '#EAB308',
 };
 
 export default function RootLayout({

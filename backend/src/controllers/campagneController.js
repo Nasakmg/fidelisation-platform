@@ -73,25 +73,6 @@ const envoyerCampagne = async (req, res) => {
       'SELECT * FROM campagnes WHERE id = $1 AND entreprise_id = $2',
       [id, entreprise_id]
     );
-    if (campagne.canal === 'push') {
-      // Récupérer les tokens FCM des clients
-      const tokensResult = await pool.query(
-        `SELECT DISTINCT ft.token 
-     FROM fcm_tokens ft
-     WHERE ft.client_id = $1`,
-        [client.id]
-      );
-
-      const tokens = tokensResult.rows.map(r => r.token);
-      if (tokens.length > 0) {
-        await envoyerNotificationPush(
-          tokens,
-          campagne.titre,
-          campagne.message
-        );
-      }
-    }
-
     if (campagneResult.rows.length === 0) {
       return res.status(404).json({ message: '❌ Campagne introuvable' });
     }
@@ -107,6 +88,7 @@ const envoyerCampagne = async (req, res) => {
 
     let emailsEnvoyes = 0;
     let smsEnvoyes = 0;
+    let pushEnvoyes = 0;
     let echecs = 0;
 
     for (const client of clients) {
@@ -134,8 +116,22 @@ const envoyerCampagne = async (req, res) => {
         result.success ? emailsEnvoyes++ : echecs++;
 
       } else if (campagne.canal === 'push') {
-        // Push notification — à implémenter avec Firebase plus tard
-        emailsEnvoyes++;
+        const tokensResult = await pool.query(
+          `SELECT DISTINCT token
+           FROM fcm_tokens
+           WHERE client_id = $1`,
+          [client.id]
+        );
+        const tokens = tokensResult.rows.map(row => row.token);
+
+        if (tokens.length > 0) {
+          const result = await envoyerNotificationPush(
+            tokens,
+            campagne.titre,
+            campagne.message
+          );
+          pushEnvoyes += result?.successCount || 0;
+        }
       }
     }
 
@@ -151,6 +147,7 @@ const envoyerCampagne = async (req, res) => {
       nombre_destinataires: clients.length,
       emails_envoyes: emailsEnvoyes,
       sms_envoyes: smsEnvoyes,
+      push_envoyes: pushEnvoyes,
       echecs
     });
 
