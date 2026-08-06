@@ -9,7 +9,8 @@
     "migrate:abonnements": "node src/config/migrations_abonnements.js",
     "migrate:statut": "node src/config/migration_statut.js",
     "migrate:fcm": "node src/config/migration_fcm.js",
-    "migrate:devise": "node src/config/migration_devise.js"
+    "migrate:devise": "node src/config/migration_devise.js",
+    "migrate:liaison": "node src/config/migration_liaison.js"
   },
   "keywords": [],
   "author": "",

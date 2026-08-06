@@ -79,6 +79,26 @@ function ScanContent() {
       clientLogin(response.data.token, response.data.client);
       setClient(response.data.client);
       setEtape('succes');
+      // Demander permission notifications après connexion/inscription
+      if (typeof window !== 'undefined' && 'Notification' in window) {
+        const permission = await Notification.requestPermission();
+        if (permission === 'granted') {
+          try {
+            const { requestNotificationPermission } = await import('../firebase');
+            const fcmToken = await requestNotificationPermission();
+            if (fcmToken && response.data.token) {
+              await axios.post(
+                `${process.env.NEXT_PUBLIC_API_URL}/api/clients/fcm-token`,
+                { token: fcmToken },
+                { headers: { Authorization: `Bearer ${response.data.token}` } }
+              );
+              console.log('✅ Token FCM enregistré');
+            }
+          } catch (err) {
+            console.log('ℹ️ Firebase non disponible');
+          }
+        }
+      }
     } catch (err: any) {
       setErreur(err.response?.data?.message || '❌ Erreur connexion');
     }
@@ -92,6 +112,26 @@ function ScanContent() {
       clientLogin(response.data.token, response.data.client);
       setClient(response.data.client);
       setEtape('succes');
+      // Demander permission notifications après connexion/inscription
+      if (typeof window !== 'undefined' && 'Notification' in window) {
+        const permission = await Notification.requestPermission();
+        if (permission === 'granted') {
+          try {
+            const { requestNotificationPermission } = await import('../firebase');
+            const fcmToken = await requestNotificationPermission();
+            if (fcmToken && response.data.token) {
+              await axios.post(
+                `${process.env.NEXT_PUBLIC_API_URL}/api/clients/fcm-token`,
+                { token: fcmToken },
+                { headers: { Authorization: `Bearer ${response.data.token}` } }
+              );
+              console.log('✅ Token FCM enregistré');
+            }
+          } catch (err) {
+            console.log('ℹ️ Firebase non disponible');
+          }
+        }
+      }
     } catch (err: any) {
       setErreur(err.response?.data?.message || '❌ Erreur inscription');
     }

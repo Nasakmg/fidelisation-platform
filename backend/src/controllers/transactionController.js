@@ -38,10 +38,18 @@ const scannerQRCode = async (req, res) => {
       points_gagnes = Math.floor(montant / 100);
     }
 
+
     await pool.query(
       `INSERT INTO transactions (client_id, entreprise_id, montant, points_gagnes, type_achat)
        VALUES ($1, $2, $3, $4, $5)`,
       [client.id, entreprise_id, montant, points_gagnes, type_achat]
+    );
+    
+    // Lier le client à l'entreprise automatiquement
+    await pool.query(
+      `INSERT INTO client_entreprise (client_id, entreprise_id)
+   VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+      [client.id, entreprise_id]
     );
 
     const updatedClient = await pool.query(

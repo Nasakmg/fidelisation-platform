@@ -21,24 +21,22 @@ export default function ProfilPage() {
 useEffect(() => {
   if (!clientToken) { router.push('/client'); return; }
   fetchProfil();
-  
-  // Firebase uniquement côté client
-  if (typeof window !== 'undefined') {
-    import('../firebase').then(({ requestNotificationPermission }) => {
-      requestNotificationPermission().then(async (fcmToken) => {
-        if (fcmToken && clientToken) {
-          try {
-            await axios.post(
-              `${process.env.NEXT_PUBLIC_API_URL}/api/clients/fcm-token`,
-              { token: fcmToken },
-              { headers: { Authorization: `Bearer ${clientToken}` } }
-            );
-          } catch (err) {
-            console.error(err);
-          }
+
+  if (typeof window !== 'undefined' && 'Notification' in window) {
+    import('../firebase').then(async ({ requestNotificationPermission }) => {
+      const fcmToken = await requestNotificationPermission();
+      if (fcmToken) {
+        try {
+          await axios.post(
+            `${process.env.NEXT_PUBLIC_API_URL}/api/clients/fcm-token`,
+            { token: fcmToken },
+            { headers: { Authorization: `Bearer ${clientToken}` } }
+          );
+        } catch (err) {
+          console.error(err);
         }
-      });
-    });
+      }
+    }).catch(() => {});
   }
 }, [clientToken]);
   const fetchProfil = async () => {

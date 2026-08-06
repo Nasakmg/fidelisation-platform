@@ -8,7 +8,6 @@ router.post('/inscription', inscrireClient);
 router.post('/connexion', connecterClient);
 router.get('/profil', verifyToken, profilClient);
 
-// Route Google Wallet
 router.get('/wallet', verifyToken, async (req, res) => {
   try {
     const pool = require('../config/db');
@@ -17,10 +16,27 @@ router.get('/wallet', verifyToken, async (req, res) => {
       [req.user.id]
     );
     const client = result.rows[0];
+
+    if (!client) {
+      return res.status(404).json({ message: '❌ Client introuvable' });
+    }
+
+    // Vérifier si Google Wallet est configuré
+    if (!process.env.GOOGLE_SERVICE_ACCOUNT_FILE) {
+      return res.status(503).json({ 
+        message: '❌ Google Wallet non configuré sur ce serveur'
+      });
+    }
+
+    const { genererLienWallet } = require('../config/googleWallet');
     const lien = await genererLienWallet(client);
     res.json({ lien_wallet: lien });
   } catch (err) {
-    res.status(500).json({ message: '❌ Erreur Google Wallet', error: err.message });
+    console.error('Erreur wallet:', err);
+    res.status(500).json({ 
+      message: '❌ Erreur Google Wallet', 
+      error: err.message 
+    });
   }
 });
 

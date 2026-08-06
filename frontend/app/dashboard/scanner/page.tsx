@@ -46,7 +46,7 @@ export default function ScannerPage() {
           qr_code: qrCode,
           montant: parseFloat(montant),
           type_achat: typeAchat
-        },
+        }, 
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setResultat(response.data);
