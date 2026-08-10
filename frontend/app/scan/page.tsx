@@ -108,7 +108,12 @@ function ScanContent() {
     e.preventDefault();
     setErreur('');
     try {
-      const response = await axios.post(`${API_URL}/api/clients/inscription`, formData);
+      const payload = {
+        ...formData,
+        entreprise_qr: boutiqueQR || undefined
+      };
+
+      const response = await axios.post(`${API_URL}/api/clients/inscription`, payload);
       clientLogin(response.data.token, response.data.client);
       setClient(response.data.client);
       setEtape('succes');

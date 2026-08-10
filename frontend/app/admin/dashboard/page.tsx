@@ -73,6 +73,18 @@ export default function AdminDashboard() {
     } catch (err) { alert('❌ Erreur'); }
   };
 
+  const handleSupprimerClientAdmin = async (id: number) => {
+    if (!confirm('Supprimer définitivement ce client et ses données ?')) return;
+    const token = localStorage.getItem('admin_token');
+    try {
+      await axios.delete(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/clients/${id}`, { headers: { Authorization: `Bearer ${token}` } });
+      setClients(clients.filter(c => c.id !== id));
+      alert('✅ Client supprimé');
+    } catch (err: any) {
+      alert(err.response?.data?.message || '❌ Erreur');
+    }
+  };
+
   const handleNotificationGlobale = async (e: React.FormEvent) => {
     e.preventDefault();
     setNotifLoading(true);
@@ -359,6 +371,14 @@ export default function AdminDashboard() {
                       <td className="px-5 py-4 text-gray-500 text-sm">{c.total_transactions}</td>
                       <td className="px-5 py-4 text-gray-400 text-sm">{parseInt(c.total_depense).toLocaleString()} FCFA</td>
                       <td className="px-5 py-4 text-gray-600 text-xs">{new Date(c.created_at).toLocaleDateString('fr-FR')}</td>
+                      <td className="px-5 py-4">
+                        <button
+                          onClick={() => handleSupprimerClientAdmin(c.id)}
+                          className="inline-flex items-center gap-1.5 bg-red-500/5 hover:bg-red-500/10 border border-red-500/10 text-red-500/70 hover:text-red-400 px-3 py-2 rounded-xl text-xs transition-all"
+                        >
+                          <Trash2 size={13} /> Supprimer
+                        </button>
+                      </td>
                     </motion.tr>
                   ))}
                 </tbody>

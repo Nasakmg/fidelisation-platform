@@ -44,6 +44,21 @@ export default function ClientsPage() {
     return { label: 'Bronze', icon: Star, color: 'text-amber-600 bg-amber-600/10 border-amber-600/20' };
   };
 
+  const handleSupprimerLienClient = async (clientId: number) => {
+    if (!confirm('Retirer ce client de votre entreprise ?')) return;
+
+    try {
+      await axios.delete(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/entreprises/clients/${clientId}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setClients((prev) => prev.filter((client) => client.id !== clientId));
+      alert('✅ Client retiré');
+    } catch (err: any) {
+      alert(err.response?.data?.message || '❌ Erreur');
+    }
+  };
+
   const clientsFiltres = clients.filter(c => {
     const matchRecherche = `${c.nom} ${c.prenom} ${c.email} ${c.telephone}`
       .toLowerCase().includes(recherche.toLowerCase());
@@ -203,10 +218,18 @@ export default function ClientsPage() {
                     </p>
                   </div>
 
-                  {/* QR Code */}
-                  <div className="flex items-center gap-2 text-gray-700 text-xs">
-                    <QrCode size={12} />
-                    <span className="font-mono">{client.qr_code}</span>
+                  <div className="flex items-center justify-between gap-3 pt-3 border-t border-white/[0.06]">
+                    {/* QR Code */}
+                    <div className="flex items-center gap-2 text-gray-700 text-xs">
+                      <QrCode size={12} />
+                      <span className="font-mono">{client.qr_code}</span>
+                    </div>
+                    <button
+                      onClick={() => handleSupprimerLienClient(client.id)}
+                      className="inline-flex items-center gap-1.5 bg-red-500/5 hover:bg-red-500/10 border border-red-500/10 text-red-500/70 hover:text-red-400 px-3 py-2 rounded-xl text-xs transition-all"
+                    >
+                      Retirer
+                    </button>
                   </div>
                 </motion.div>
               );

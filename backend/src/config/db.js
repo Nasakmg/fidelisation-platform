@@ -15,11 +15,30 @@ pool.on('error', (err) => {
   console.error('❌ Erreur pool PostgreSQL :', err.message);
 });
 
+const ensureFcmTokensTable = async () => {
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS fcm_tokens (
+        id SERIAL PRIMARY KEY,
+        client_id INTEGER REFERENCES clients(id) ON DELETE CASCADE,
+        token TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT NOW(),
+        UNIQUE(client_id, token)
+      );
+    `);
+    console.log('✅ Table fcm_tokens vérifiée/créée');
+  } catch (err) {
+    console.error('❌ Erreur création table fcm_tokens :', err.message);
+    throw err;
+  }
+};
+
 // Reconnexion automatique
 const connectWithRetry = async () => {
   try {
     await pool.query('SELECT NOW()');
     console.log('✅ Base de données connectée !');
+    await ensureFcmTokensTable();
   } catch (err) {
     console.error('❌ Connexion DB échouée, nouvelle tentative dans 5s...');
     setTimeout(connectWithRetry, 5000);

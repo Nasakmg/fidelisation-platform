@@ -183,6 +183,43 @@ const getAllClients = async (req, res) => {
   }
 };
 
+// Supprimer un client de manière administrative
+const supprimerClientAdmin = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const clientId = Number(id);
+    if (!clientId || Number.isNaN(clientId)) {
+      return res.status(400).json({ message: '❌ ID client invalide' });
+    }
+
+    await pool.query('BEGIN');
+
+    await pool.query('DELETE FROM notifications WHERE client_id = $1', [clientId]);
+    await pool.query('DELETE FROM transactions WHERE client_id = $1', [clientId]);
+    await pool.query('DELETE FROM fcm_tokens WHERE client_id = $1', [clientId]);
+    await pool.query('DELETE FROM client_entreprise WHERE client_id = $1', [clientId]);
+
+    const result = await pool.query(
+      'DELETE FROM clients WHERE id = $1 RETURNING id',
+      [clientId]
+    );
+
+    await pool.query('COMMIT');
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: '❌ Client introuvable' });
+    }
+
+    res.json({
+      message: `✅ Client ${clientId} supprimé avec ses liens et ses données métiers`
+    });
+  } catch (err) {
+    await pool.query('ROLLBACK').catch(() => {});
+    res.status(500).json({ message: '❌ Erreur serveur', error: err.message });
+  }
+};
+
 // Campagnes globales admin
 const getCampagnesGlobales = async (req, res) => {
   try {
@@ -234,6 +271,7 @@ module.exports = {
   suspendreEntreprise,
   supprimerEntreprise,
   getAllClients,
+  supprimerClientAdmin,
   getCampagnesGlobales,
   envoyerNotificationGlobale
 };

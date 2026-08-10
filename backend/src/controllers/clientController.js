@@ -7,13 +7,11 @@ const inscrireClient = async (req, res) => {
   const { nom, prenom, email, telephone, mot_de_passe, date_naissance, entreprise_qr } = req.body;
 
   try {
-    console.log('Body reçu:', req.body);
-
     const existe = await pool.query(
-      'SELECT id FROM clients WHERE email = $1 OR telephone = $2', [email, telephone]
+      'SELECT id FROM clients WHERE email = $1', [email]
     );
     if (existe.rows.length > 0) {
-      return res.status(400).json({ message: '❌ Email ou téléphone déjà utilisé' });
+      return res.status(400).json({ message: '❌ Email déjà utilisé' });
     }
 
     const hash = await bcrypt.hash(String(mot_de_passe), 10);
@@ -28,12 +26,14 @@ const inscrireClient = async (req, res) => {
 
     const client = result.rows[0];
 
-    // Lier automatiquement le client à la boutique si QR boutique fourni
+    // LIER AUTOMATIQUEMENT à l'entreprise
     if (entreprise_qr) {
       try {
+        // Format QR boutique : ENT-1-BOUTIQUEDAKARMODE
         const parts = entreprise_qr.split('-');
-        const entreprise_id = parts[1];
-        if (entreprise_id) {
+        const entreprise_id = parseInt(parts[1]);
+        
+        if (!isNaN(entreprise_id)) {
           await pool.query(
             `INSERT INTO client_entreprise (client_id, entreprise_id)
              VALUES ($1, $2) ON CONFLICT DO NOTHING`,
@@ -42,7 +42,7 @@ const inscrireClient = async (req, res) => {
           console.log(`✅ Client ${client.id} lié à l'entreprise ${entreprise_id}`);
         }
       } catch (err) {
-        console.log('ℹ️ Liaison entreprise ignorée:', err.message);
+        console.error('❌ Erreur liaison:', err.message);
       }
     }
 

@@ -105,12 +105,15 @@ const getClients = async (req, res) => {
     const result = await pool.query(
       `SELECT DISTINCT c.id, c.nom, c.prenom, c.email, c.telephone,
               c.qr_code, c.points_total, c.created_at,
-              COUNT(t.id) as nombre_achats,
-              SUM(t.montant) as total_depense,
+              COUNT(DISTINCT t.id) as nombre_achats,
+              COALESCE(SUM(t.montant), 0) as total_depense,
               MAX(t.created_at) as dernier_achat
        FROM clients c
-       JOIN transactions t ON c.id = t.client_id
-       WHERE t.entreprise_id = $1
+       LEFT JOIN transactions t
+         ON c.id = t.client_id AND t.entreprise_id = $1
+       LEFT JOIN client_entreprise ce
+         ON c.id = ce.client_id AND ce.entreprise_id = $1
+       WHERE t.entreprise_id = $1 OR ce.entreprise_id = $1
        GROUP BY c.id
        ORDER BY total_depense DESC`,
       [entreprise_id]
@@ -126,5 +129,41 @@ const getClients = async (req, res) => {
   }
 };
 
-module.exports = { inscrireEntreprise, connecterEntreprise, getClients };
+// Supprimer un lien client-entreprise pour l'entreprise authentifiée
+const supprimerClientEntreprise = async (req, res) => {
+  const entreprise_id = req.user.id;
+  const { id: client_id } = req.params;
+
+  if (!req.user || req.user.role !== 'entreprise') {
+    return res.status(403).json({ message: '❌ Accès refusé' });
+  }
+
+  try {
+    const clientId = Number(client_id);
+    if (!clientId || Number.isNaN(clientId)) {
+      return res.status(400).json({ message: '❌ ID client invalide' });
+    }
+
+    const result = await pool.query(
+      `DELETE FROM client_entreprise
+       WHERE client_id = $1 AND entreprise_id = $2
+       RETURNING client_id`,
+      [clientId, entreprise_id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        message: '❌ Lien client-entreprise introuvable'
+      });
+    }
+
+    res.json({
+      message: `✅ Client ${clientId} retiré de l'entreprise ${entreprise_id}`
+    });
+  } catch (err) {
+    res.status(500).json({ message: '❌ Erreur serveur', error: err.message });
+  }
+};
+
+module.exports = { inscrireEntreprise, connecterEntreprise, getClients, supprimerClientEntreprise };
 

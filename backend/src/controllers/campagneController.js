@@ -36,25 +36,7 @@ const envoyerCampagne = async (req, res) => {
   const entreprise_id = req.user.id;
 
   try {
-    // Récupérer tous les clients liés à l'entreprise
-    const clientsResult = await pool.query(
-      `SELECT DISTINCT c.id, c.nom, c.prenom, c.email, c.telephone
-       FROM clients c
-       LEFT JOIN transactions t ON c.id = t.client_id AND t.entreprise_id = $1
-       LEFT JOIN client_entreprise ce ON c.id = ce.client_id AND ce.entreprise_id = $1
-       WHERE t.entreprise_id = $1 OR ce.entreprise_id = $1`,
-      [entreprise_id]
-    );
-
-    const clients = clientsResult.rows;
-    console.log(`📢 ${clients.length} client(s) trouvé(s) pour la campagne`);
-
-    if (clients.length === 0) {
-      return res.status(400).json({ 
-        message: '❌ Aucun client à notifier. Les clients doivent d\'abord être liés à votre boutique.' 
-      });
-    }
-
+    // 1. Vérifier que la campagne existe
     const campagneResult = await pool.query(
       'SELECT * FROM campagnes WHERE id = $1 AND entreprise_id = $2',
       [id, entreprise_id]
@@ -66,63 +48,111 @@ const envoyerCampagne = async (req, res) => {
 
     const campagne = campagneResult.rows[0];
 
+    // 2. Récupérer le nom de l'entreprise
     const entrepriseResult = await pool.query(
-      'SELECT nom FROM entreprises WHERE id = $1', [entreprise_id]
+      'SELECT nom FROM entreprises WHERE id = $1',
+      [entreprise_id]
     );
     const nomEntreprise = entrepriseResult.rows[0]?.nom || 'E-Wallet';
 
     let emailsEnvoyes = 0;
-    let smsEnvoyes = 0;
     let pushEnvoyes = 0;
+    let smsEnvoyes = 0;
     let echecs = 0;
 
-    for (const client of clients) {
-      // Toujours enregistrer la notification
-      await pool.query(
-        `INSERT INTO notifications (client_id, message, canal, statut)
-         VALUES ($1, $2, $3, 'envoyé')`,
-        [client.id, campagne.message, campagne.canal]
+    // 3. Gestion selon le canal
+    if (campagne.canal === 'email') {
+      const clientsResult = await pool.query(
+        `SELECT DISTINCT c.id, c.nom, c.prenom, c.email 
+         FROM clients c 
+         INNER JOIN client_entreprise ce ON c.id = ce.client_id 
+         WHERE ce.entreprise_id = $1 AND c.email IS NOT NULL`,
+        [entreprise_id]
       );
 
-      if (campagne.canal === 'email' && client.email) {
+      for (const client of clientsResult.rows) {
+        await pool.query(
+          `INSERT INTO notifications (client_id, message, canal, statut) VALUES ($1, $2, 'email', 'envoyé')`,
+          [client.id, campagne.message]
+        );
         const result = await envoyerEmail(
           client.email,
           `${campagne.titre} — ${nomEntreprise}`,
           campagne.message
         );
         if (result.success) emailsEnvoyes++;
-        else { echecs++; console.error(`Email échoué pour ${client.email}:`, result.error); }
+        else echecs++;
+      }
 
-      } else if (campagne.canal === 'sms' && client.telephone) {
-        const result = await envoyerSMS(
-          client.telephone,
-          `${nomEntreprise}: ${campagne.message}`
+    } else if (campagne.canal === 'sms') {
+      const clientsResult = await pool.query(
+        `SELECT DISTINCT c.id, c.nom, c.telephone 
+         FROM clients c 
+         INNER JOIN client_entreprise ce ON c.id = ce.client_id 
+         WHERE ce.entreprise_id = $1 AND c.telephone IS NOT NULL`,
+        [entreprise_id]
+      );
+
+      for (const client of clientsResult.rows) {
+        await pool.query(
+          `INSERT INTO notifications (client_id, message, canal, statut) VALUES ($1, $2, 'sms', 'envoyé')`,
+          [client.id, campagne.message]
         );
+        const result = await envoyerSMS(client.telephone, `${nomEntreprise}: ${campagne.message}`);
         if (result.success) smsEnvoyes++;
-        else { echecs++; console.error(`SMS échoué pour ${client.telephone}:`, result.error); }
+        else echecs++;
+      }
 
-      } else if (campagne.canal === 'push') {
-        const tokensResult = await pool.query(
-          'SELECT token FROM fcm_tokens WHERE client_id = $1',
-          [client.id]
+    } else if (campagne.canal === 'push') {
+      // FIX SQL: Joindre correctement fcm_tokens avec client_entreprise ET clients
+      const tokensResult = await pool.query(
+        `SELECT DISTINCT ft.token, c.id AS client_id, c.nom 
+         FROM fcm_tokens ft 
+         INNER JOIN client_entreprise ce ON ft.client_id = ce.client_id 
+         INNER JOIN clients c ON ft.client_id = c.id 
+         WHERE ce.entreprise_id = $1`,
+        [entreprise_id]
+      );
+
+      console.log(`🔔 ${tokensResult.rows.length} token(s) FCM trouvé(s) pour entreprise ${entreprise_id}`);
+
+      if (tokensResult.rows.length === 0) {
+        await pool.query(
+          `UPDATE campagnes SET statut = 'envoyée', date_envoi = NOW() WHERE id = $1`,
+          [id]
         );
-        const tokens = tokensResult.rows.map(r => r.token);
-        if (tokens.length > 0) {
-          await envoyerNotificationPush(tokens, campagne.titre, campagne.message);
-          pushEnvoyes++;
-        }
+        return res.json({
+          message: '⚠️ Aucun token FCM trouvé pour vos clients.',
+          details: { push_envoyes: 0 }
+        });
+      }
+
+      // Enregistrer l'historique des notifications
+      for (const row of tokensResult.rows) {
+        await pool.query(
+          `INSERT INTO notifications (client_id, message, canal, statut) VALUES ($1, $2, 'push', 'envoyé')`,
+          [row.client_id, campagne.message]
+        );
+      }
+
+      const tokens = tokensResult.rows.map(r => r.token);
+      const result = await envoyerNotificationPush(tokens, campagne.titre, campagne.message);
+
+      if (result) {
+        pushEnvoyes = result.successCount || 0;
+        echecs = result.failureCount || 0;
       }
     }
 
+    // 4. Mettre à jour le statut de la campagne
     await pool.query(
       `UPDATE campagnes SET statut = 'envoyée', date_envoi = NOW() WHERE id = $1`,
       [id]
     );
 
     res.json({
-      message: `✅ Campagne envoyée à ${clients.length} client(s) !`,
+      message: '✅ Campagne envoyée avec succès !',
       details: {
-        total_clients: clients.length,
         emails_envoyes: emailsEnvoyes,
         sms_envoyes: smsEnvoyes,
         push_envoyes: pushEnvoyes,

@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import axios from 'axios';
 import { motion } from 'framer-motion';
 import { useClientAuth } from '../../context/ClientAuthContext';
@@ -10,6 +10,9 @@ import {
 } from 'lucide-react';
 
 export default function ClientInscriptionPage() {
+  const searchParams = useSearchParams();
+  const boutiqueQR = searchParams.get('boutique') || '';
+
   const [formData, setFormData] = useState({
     nom: '', prenom: '', email: '',
     telephone: '', mot_de_passe: ''
@@ -29,9 +32,14 @@ export default function ClientInscriptionPage() {
     setChargement(true);
     setErreur('');
     try {
+      const payload = {
+        ...formData,
+        entreprise_qr: boutiqueQR || undefined
+      };
+
       const response = await axios.post(
         `${process.env.NEXT_PUBLIC_API_URL}/api/clients/inscription`,
-        formData
+        payload
       );
       clientLogin(response.data.token, response.data.client);
       setSucces(true);

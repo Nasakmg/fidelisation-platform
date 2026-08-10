@@ -18,27 +18,33 @@ export default function ProfilPage() {
   const [walletLoading, setWalletLoading] = useState(false);
   const [chargement, setChargement] = useState(true);
 
-useEffect(() => {
-  if (!clientToken) { router.push('/client'); return; }
-  fetchProfil();
+  useEffect(() => {
+    if (!clientToken) { router.push('/client'); return; }
+    fetchProfil();
 
-  if (typeof window !== 'undefined' && 'Notification' in window) {
-    import('../firebase').then(async ({ requestNotificationPermission }) => {
-      const fcmToken = await requestNotificationPermission();
-      if (fcmToken) {
+    // Firebase Push uniquement côté client
+    if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+      const setupPush = async () => {
         try {
-          await axios.post(
-            `${process.env.NEXT_PUBLIC_API_URL}/api/clients/fcm-token`,
-            { token: fcmToken },
-            { headers: { Authorization: `Bearer ${clientToken}` } }
-          );
+          const { requestNotificationPermission } = await import('../firebase');
+          const fcmToken = await requestNotificationPermission();
+
+          if (fcmToken) {
+            const response = await axios.post(
+              `${process.env.NEXT_PUBLIC_API_URL}/api/clients/fcm-token`,
+              { token: fcmToken },
+              { headers: { Authorization: `Bearer ${clientToken}` } }
+            );
+            console.log('✅ Token FCM enregistré sur le serveur');
+          }
         } catch (err) {
-          console.error(err);
+          console.error('❌ Erreur setup push:', err);
         }
-      }
-    }).catch(() => {});
-  }
-}, [clientToken]);
+      };
+
+      setupPush();
+    }
+  }, [clientToken]);
   const fetchProfil = async () => {
     try {
       const response = await axios.get(

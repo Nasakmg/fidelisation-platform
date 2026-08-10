@@ -1,45 +1,67 @@
-let admin;
+const firebaseAdmin = require('firebase-admin');
+const { initializeApp, cert, getApps } = require('firebase-admin/app');
+const { getMessaging } = require('firebase-admin/messaging');
+const path = require('path');
 
-try {
-  admin = require('firebase-admin');
-} catch (err) {
-  console.log('ℹ️ firebase-admin non disponible');
-}
+let isInitialized = false;
 
 const initAdmin = () => {
-  if (!admin) return null;
-  if (admin.apps && admin.apps.length > 0) return admin;
-  
-  try {
-    admin.initializeApp({
-      credential: admin.credential.cert({
-        projectId: process.env.FIREBASE_PROJECT_ID,
-        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-        privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n')
-      })
-    });
-    console.log('✅ Firebase Admin initialisé');
-  } catch (err) {
-    console.log('ℹ️ Firebase Admin erreur:', err.message);
+  if (isInitialized || getApps().length > 0) {
+    return true;
   }
-  return admin;
+
+  try {
+    const serviceAccountPath = path.join(__dirname, 'fidelitewalletperso-789d16de0a70.json');
+    const serviceAccount = require(serviceAccountPath);
+
+    initializeApp({
+      credential: cert(serviceAccount)
+    });
+
+    isInitialized = true;
+    console.log('✅ Firebase Admin connecté avec succès !');
+    return true;
+  } catch (err) {
+    console.error('❌ Erreur initialisation Firebase Admin:', err.message);
+    return false;
+  }
 };
 
 const envoyerNotificationPush = async (tokens, titre, message) => {
-  if (!tokens || tokens.length === 0) return;
-  
-  const adminInstance = initAdmin();
-  if (!adminInstance) return;
+  if (!tokens || !Array.isArray(tokens) || tokens.length === 0) {
+    console.log('⚠️ Aucun token FCM fourni');
+    return { successCount: 0, failureCount: 0 };
+  }
+
+  const tokensValides = tokens.filter(t => typeof t === 'string' && t.trim() !== '');
+  if (tokensValides.length === 0) {
+    console.log('⚠️ Aucun token valide après filtrage');
+    return { successCount: 0, failureCount: 0 };
+  }
+
+  const isReady = initAdmin();
+  if (!isReady) {
+    console.error('❌ Firebase Admin non disponible');
+    return { successCount: 0, failureCount: tokensValides.length };
+  }
 
   try {
-    const response = await adminInstance.messaging().sendEachForMulticast({
-      notification: { title: titre, body: message },
-      tokens
-    });
-    console.log(`✅ ${response.successCount} notifications push envoyées`);
+    const multicastMessage = {
+      notification: {
+        title: titre || 'Notification',
+        body: message || ''
+      },
+      tokens: tokensValides
+    };
+
+    console.log(`🔔 Envoi Push FCM à ${tokensValides.length} appareil(s)...`);
+    const response = await getMessaging().sendEachForMulticast(multicastMessage);
+
+    console.log(`✅ ${response.successCount} push envoyé(s) avec succès !`);
     return response;
   } catch (err) {
-    console.error('❌ Erreur Push:', err.message);
+    console.error('❌ Erreur lors de l\'envoi Push:', err.message);
+    return { successCount: 0, failureCount: tokensValides.length };
   }
 };
 
