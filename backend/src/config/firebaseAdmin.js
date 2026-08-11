@@ -14,21 +14,19 @@ const initAdmin = () => {
   try {
     const serviceAccountPath = path.join(__dirname, 'fidelitewalletperso-789d16de0a70.json');
 
-    // 1. Si le fichier JSON existe (Cas Local)
+    // 1. Cas Local : Fichier JSON présent
     if (fs.existsSync(serviceAccountPath)) {
       const serviceAccount = require(serviceAccountPath);
-      initializeApp({
-        credential: cert(serviceAccount)
-      });
+      initializeApp({ credential: cert(serviceAccount) });
       isInitialized = true;
       console.log('✅ Firebase Admin connecté via fichier JSON !');
       return true;
     }
 
-    // 2. Si le fichier JSON n'existe pas (Cas Render / Production)
+    // 2. Cas Render / Production : Variables .env
     const privateKey = (process.env.FIREBASE_PRIVATE_KEY || '')
       .replace(/\\n/g, '\n')
-      .replace(/^"|"$/g, ''); // Nettoie les guillemets éventuels
+      .replace(/^"|"$/g, '');
 
     if (!process.env.FIREBASE_PROJECT_ID || !process.env.FIREBASE_CLIENT_EMAIL || !privateKey) {
       throw new Error('Variables d\'environnement Firebase manquantes dans Render.');
@@ -43,7 +41,7 @@ const initAdmin = () => {
     });
 
     isInitialized = true;
-    console.log('✅ Firebase Admin connecté via variables d\'environnement Render !');
+    console.log('✅ Firebase Admin connecté via variables Render !');
     return true;
   } catch (err) {
     console.error('❌ Erreur initialisation Firebase Admin:', err.message);
@@ -59,7 +57,6 @@ const envoyerNotificationPush = async (tokens, titre, message) => {
 
   const tokensValides = tokens.filter(t => typeof t === 'string' && t.trim() !== '');
   if (tokensValides.length === 0) {
-    console.log('⚠️ Aucun token valide après filtrage');
     return { successCount: 0, failureCount: 0 };
   }
 
@@ -80,7 +77,6 @@ const envoyerNotificationPush = async (tokens, titre, message) => {
 
     console.log(`🔔 Envoi Push FCM à ${tokensValides.length} appareil(s)...`);
     const response = await getMessaging().sendEachForMulticast(multicastMessage);
-
     console.log(`✅ ${response.successCount} push envoyé(s) avec succès !`);
     return response;
   } catch (err) {
