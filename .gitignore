@@ -3,5 +3,6 @@ node_modules/
 .env.local
 dist/
 
-*.json
+# Ignorer uniquement la clé privée Firebase secrète
 src/config/fidelitewalletperso-789d16de0a70.json
+*.pem
