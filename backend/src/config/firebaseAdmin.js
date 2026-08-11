@@ -2,6 +2,7 @@ const firebaseAdmin = require('firebase-admin');
 const { initializeApp, cert, getApps } = require('firebase-admin/app');
 const { getMessaging } = require('firebase-admin/messaging');
 const path = require('path');
+const fs = require('fs');
 
 let isInitialized = false;
 
@@ -12,14 +13,37 @@ const initAdmin = () => {
 
   try {
     const serviceAccountPath = path.join(__dirname, 'fidelitewalletperso-789d16de0a70.json');
-    const serviceAccount = require(serviceAccountPath);
+
+    // 1. Si le fichier JSON existe (Cas Local)
+    if (fs.existsSync(serviceAccountPath)) {
+      const serviceAccount = require(serviceAccountPath);
+      initializeApp({
+        credential: cert(serviceAccount)
+      });
+      isInitialized = true;
+      console.log('✅ Firebase Admin connecté via fichier JSON !');
+      return true;
+    }
+
+    // 2. Si le fichier JSON n'existe pas (Cas Render / Production)
+    const privateKey = (process.env.FIREBASE_PRIVATE_KEY || '')
+      .replace(/\\n/g, '\n')
+      .replace(/^"|"$/g, ''); // Nettoie les guillemets éventuels
+
+    if (!process.env.FIREBASE_PROJECT_ID || !process.env.FIREBASE_CLIENT_EMAIL || !privateKey) {
+      throw new Error('Variables d\'environnement Firebase manquantes dans Render.');
+    }
 
     initializeApp({
-      credential: cert(serviceAccount)
+      credential: cert({
+        projectId: process.env.FIREBASE_PROJECT_ID,
+        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+        privateKey: privateKey
+      })
     });
 
     isInitialized = true;
-    console.log('✅ Firebase Admin connecté avec succès !');
+    console.log('✅ Firebase Admin connecté via variables d\'environnement Render !');
     return true;
   } catch (err) {
     console.error('❌ Erreur initialisation Firebase Admin:', err.message);
