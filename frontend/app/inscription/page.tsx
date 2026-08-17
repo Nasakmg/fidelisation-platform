@@ -11,9 +11,9 @@ import {
 
 export default function InscriptionPage() {
   const [formData, setFormData] = useState({
-     nom: '', email: '', telephone: '',
-  mot_de_passe: '', secteur: '', adresse: '',
-  pays: 'Sénégal' // valeur par défaut
+    nom: '', email: '', telephone: '',
+    mot_de_passe: '', secteur: '', adresse: '',
+    pays: 'Sénégal' // valeur par défaut
   });
   const [erreur, setErreur] = useState('');
   const [succes, setSucces] = useState(false);
@@ -67,6 +67,8 @@ export default function InscriptionPage() {
     'Dashboard statistiques',
     'Intégration Google Wallet',
   ];
+
+
 
   if (succes) {
     return (
@@ -173,8 +175,10 @@ export default function InscriptionPage() {
             <p className="text-gray-500">Espace Entreprise — Gratuit</p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-
+          <form onSubmit={handleSubmit} className="space-y-4" autoComplete="off">
+            {/* PIÈGE POUR AUTO-COMPLÉTION CHROME (Champs invisibles) */}
+            <input type="text" name="prevent_autofill_username" id="prevent_autofill_username" value="" style={{ display: 'none' }} tabIndex={-1} readOnly />
+            <input type="password" name="prevent_autofill_password" id="prevent_autofill_password" value="" style={{ display: 'none' }} tabIndex={-1} readOnly />
             {/* Nom */}
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -187,8 +191,9 @@ export default function InscriptionPage() {
                   name="nom"
                   value={formData.nom}
                   onChange={handleChange}
+                  autoComplete="one-time-code"
                   className="w-full bg-white/[0.04] border border-white/[0.08] text-white rounded-xl pl-11 pr-4 py-3 focus:outline-none focus:border-yellow-500/50 transition-all placeholder:text-gray-700 text-sm"
-                  placeholder="Boutique Prestige Dakar"
+                  placeholder=""
                   required
                 />
               </div>
@@ -204,8 +209,9 @@ export default function InscriptionPage() {
                   name="email"
                   value={formData.email}
                   onChange={handleChange}
+                  autoComplete="one-time-code"
                   className="w-full bg-white/[0.04] border border-white/[0.08] text-white rounded-xl pl-11 pr-4 py-3 focus:outline-none focus:border-yellow-500/50 transition-all placeholder:text-gray-700 text-sm"
-                  placeholder="contact@entreprise.com"
+                  placeholder=""
                   required
                 />
               </div>
@@ -220,6 +226,7 @@ export default function InscriptionPage() {
                   name="pays"
                   value={formData.pays}
                   onChange={handleChange}
+                  autoComplete="off"
                   className="w-full bg-white/[0.04] border border-white/[0.08] text-white rounded-xl pl-11 pr-4 py-3 focus:outline-none focus:border-yellow-500/50 transition-all text-sm appearance-none"
                   required
                 >
@@ -240,8 +247,9 @@ export default function InscriptionPage() {
                   name="telephone"
                   value={formData.telephone}
                   onChange={handleChange}
+                  autoComplete="one-time-code"
                   className="w-full bg-white/[0.04] border border-white/[0.08] text-white rounded-xl pl-11 pr-4 py-3 focus:outline-none focus:border-yellow-500/50 transition-all placeholder:text-gray-700 text-sm"
-                  placeholder="771234567"
+                  placeholder=""
                   required
                 />
               </div>
@@ -258,6 +266,7 @@ export default function InscriptionPage() {
                   name="secteur"
                   value={formData.secteur}
                   onChange={handleChange}
+                  autoComplete="off"
                   className="w-full bg-white/[0.04] border border-white/[0.08] text-white rounded-xl pl-11 pr-4 py-3 focus:outline-none focus:border-yellow-500/50 transition-all text-sm appearance-none"
                   required
                 >
@@ -279,8 +288,9 @@ export default function InscriptionPage() {
                   name="adresse"
                   value={formData.adresse}
                   onChange={handleChange}
+                  autoComplete="one-time-code"
                   className="w-full bg-white/[0.04] border border-white/[0.08] text-white rounded-xl pl-11 pr-4 py-3 focus:outline-none focus:border-yellow-500/50 transition-all placeholder:text-gray-700 text-sm"
-                  placeholder="Plateau, Dakar"
+                  placeholder=""
                 />
               </div>
             </div>
@@ -297,6 +307,7 @@ export default function InscriptionPage() {
                   name="mot_de_passe"
                   value={formData.mot_de_passe}
                   onChange={handleChange}
+                  autoComplete="new-password"
                   className="w-full bg-white/[0.04] border border-white/[0.08] text-white rounded-xl pl-11 pr-4 py-3 focus:outline-none focus:border-yellow-500/50 transition-all placeholder:text-gray-700 text-sm"
                   placeholder="••••••••"
                   required

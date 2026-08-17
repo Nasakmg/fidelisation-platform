@@ -49,39 +49,42 @@ const initAdmin = () => {
   }
 };
 
-const envoyerNotificationPush = async (tokens, titre, message) => {
-  if (!tokens || !Array.isArray(tokens) || tokens.length === 0) {
-    console.log('⚠️ Aucun token FCM fourni');
-    return { successCount: 0, failureCount: 0 };
-  }
+const envoyerNotificationPush = async (tokens, titre, message, nomEntreprise = 'Plateforme de fidélisation') => {
+  if (!tokens || tokens.length === 0) return;
 
-  const tokensValides = tokens.filter(t => typeof t === 'string' && t.trim() !== '');
-  if (tokensValides.length === 0) {
-    return { successCount: 0, failureCount: 0 };
-  }
+  const ok = initAdmin();
+  if (!ok) return;
 
-  const isReady = initAdmin();
-  if (!isReady) {
-    console.error('❌ Firebase Admin non disponible');
-    return { successCount: 0, failureCount: tokensValides.length };
-  }
+  // On combine le titre de la campagne et le contenu du message
+  const contenuNotification = titre ? `${titre}\n${message}` : message;
 
   try {
     const multicastMessage = {
       notification: {
-        title: titre || 'Notification',
-        body: message || ''
+        title: nomEntreprise, // Nom de l'entreprise comme titre principal
+        body: contenuNotification, // Titre de la campagne + message
       },
-      tokens: tokensValides
+      webpush: {
+        notification: {
+          title: nomEntreprise,
+          body: contenuNotification,
+          icon: 'https://fidelisation-platform.vercel.app/icon-192.png',
+          requireInteraction: true,
+          vibrate: [200, 100, 200],
+          badge: 'https://fidelisation-platform.vercel.app/icon-192.png',
+        },
+        fcmOptions: {
+          link: 'https://fidelisation-platform.vercel.app/profil',
+        },
+      },
+      tokens,
     };
 
-    console.log(`🔔 Envoi Push FCM à ${tokensValides.length} appareil(s)...`);
     const response = await getMessaging().sendEachForMulticast(multicastMessage);
-    console.log(`✅ ${response.successCount} push envoyé(s) avec succès !`);
+    console.log(`✅ ${response.successCount} push envoyé(s) pour l'entreprise : ${nomEntreprise}`);
     return response;
   } catch (err) {
-    console.error('❌ Erreur lors de l\'envoi Push:', err.message);
-    return { successCount: 0, failureCount: tokensValides.length };
+    console.error('❌ Erreur Push:', err.message);
   }
 };
 

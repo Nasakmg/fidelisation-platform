@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "fidelitewalletperso",
+  "private_key_id": "789d16de0a70418242b973de571e60606a86faa8",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQCx96QiLSZ6AXZT\nMPO6ESl6708wSxrdII5T1+PBH4dFD35/aQr8T3fPguFc6ebF5LsI4VzK02G+dbxI\nFmi7gHlWA4e01g3I4ZDomjz1VdcnamXx7p1bG0hlbD6FdHnz/h54nqVAHD0S0TKH\npuxBcdCXB4SCI/BMqngjsAXZKLrnrCZ/OQrhmMHW1PF9W02YJKrMLPiJW3cOUFLG\n3ph65K7C1ulBBzXqpY9ILjk4FhvVL8UzCpYJ+0k7uhnYK5wsUSfHM0CtAsHfidZ9\nAp7jRKwi124MtLQmFfQnmtchqAnmmBxy/sYPDGNEBT5qwq7ZKTiEqzyBqLQ4Mw4c\nfTn4/8JbAgMBAAECggEANThf2qKS65BtYKJ2eHGybGONVF1ZasBWH8ejgfjaPHJO\nO27fzKU9KI60s1L1Yr+smRK/6528ELdnt00QQ+Y/ItRKbG9IzwZ5jb22Ng3WGiDs\n3KUlZH3rr/znU4SKBce8OAkFVP882lg6Gqv14fpVzRx/6WUy8tJVvCJjFVZjUm0+\noeCi/5nWNVo3M5NATXAx1O1I+ZrFbZfxqqH1ukzzvEUlVRJTyDdvantFGrZVyQWE\nE/5tGzoewZ0Lbs11UCG1Hg+jhzpIgwSFWviV3oZJFYst64HKhEBi5gWHMf7kPAoq\nKJLW3qDm2KIzgQ1k2tvU26sNLzikkcRZNgXG/hp2rQKBgQDaXuCToaRc13Pu88/I\nhSUbbH/hIZcU6TWxT02n5n9kheam6Gz5tF4Jommop0MoSSFa4acYpEZ9IIeX6KBP\nrDinzmx5SnYzesYuzzXmSGE52bvT0H7ZI5NhZl2TZr7YrTFiTbQgPEDF/sfYFogm\nrq/PEXoBjD5zY8jEEbMMZF7O5QKBgQDQom3CRQS33/p1KuWQ3ELVYQ8oSH4xbl8o\nhd4epzxOigUu+oAIx2kx2r0/rZnUjWQpNYo30BUAM62yYQRgqtJsoTDgJxXyts7E\nHY+UNKlWc8P+n1s+7cFk4arQimPgT6kerQwc84nwE/ZEgEaaRFDAvqxtuK87Jht/\niJyd53n4PwKBgHzBEWomQaFs0WXlUoLLViy5qsEykH640RzwInxWmdcTDHe0d3Wc\nztCQQe7BSAO+69hg7DaOu1qG+BAYLWX3DRMJQj11BdxZOtnJNZDPLwR+2Oikx6ND\nyNIvSiyI2WUuZPU1UT/NTHARI5jXHoeC6xvQbzRtK8x+aFdjiTf+K4/lAoGAYcvB\np06y534V6NYyxbR5n4vfjwJsJL+X22bkt3msyyPnSh4h5fuTU8s06qR1dyzPxoFS\nSNdBANc4lGTlqGpqOIFWZ7vqjdsjEMrKgq4sslmRhcks/FJ2VNNzPk2gg4TTwY1c\nIDYIcoDo7zMx5R4gvDikmsn3WcKDIUToJRxcEAECgYB6E04Vhqn3IS52+XjTuy3O\nkV2xLjAVA9xTPKFVQgcQFYjuIDt6JcvASyzRV8XUC5do9foWCj6HJC56oRVrzkNN\nDI0kdIDizha2y6pKCE8Qd4WM5HXqy41RONauzOODJbR3v+4gk2YwXOtJmxVadbd0\nl0msUxV2tMVmfIWE8moAaw==\n-----END PRIVATE KEY-----\n",
+  "client_email": "walletperso@fidelitewalletperso.iam.gserviceaccount.com",
+  "client_id": "112680439950517758183",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/walletperso%40fidelitewalletperso.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}

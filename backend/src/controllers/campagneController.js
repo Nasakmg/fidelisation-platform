@@ -103,46 +103,57 @@ const envoyerCampagne = async (req, res) => {
         else echecs++;
       }
 
-    } else if (campagne.canal === 'push') {
-      // FIX SQL: Joindre correctement fcm_tokens avec client_entreprise ET clients
-      const tokensResult = await pool.query(
-        `SELECT DISTINCT ft.token, c.id AS client_id, c.nom 
-         FROM fcm_tokens ft 
-         INNER JOIN client_entreprise ce ON ft.client_id = ce.client_id 
-         INNER JOIN clients c ON ft.client_id = c.id 
-         WHERE ce.entreprise_id = $1`,
-        [entreprise_id]
-      );
+   } else if (campagne.canal === 'push') {
+  // 1. Récupération de tous les tokens FCM des clients liés à l'entreprise (avec ou sans achat)
+  const tokensResult = await pool.query(
+    `SELECT DISTINCT ft.token, c.id as client_id, c.nom 
+     FROM fcm_tokens ft
+     INNER JOIN clients c ON ft.client_id = c.id
+     INNER JOIN client_entreprise ce ON c.id = ce.client_id
+     WHERE ce.entreprise_id = $1`,
+    [entreprise_id]
+  );
 
-      console.log(`🔔 ${tokensResult.rows.length} token(s) FCM trouvé(s) pour entreprise ${entreprise_id}`);
+  console.log(`🔔 ${tokensResult.rows.length} token(s) FCM trouvé(s) pour l'entreprise ID: ${entreprise_id}`);
 
-      if (tokensResult.rows.length === 0) {
-        await pool.query(
-          `UPDATE campagnes SET statut = 'envoyée', date_envoi = NOW() WHERE id = $1`,
-          [id]
-        );
-        return res.json({
-          message: '⚠️ Aucun token FCM trouvé pour vos clients.',
-          details: { push_envoyes: 0 }
-        });
-      }
+  // Cas où aucun client n'a encore activé les notifications Push
+  if (tokensResult.rows.length === 0) {
+    await pool.query(
+      `UPDATE campagnes SET statut = 'envoyée', date_envoi = NOW() WHERE id = $1`,
+      [id]
+    );
+    return res.json({
+      success: true,
+      message: '⚠️ Aucun client n\'a encore activé les notifications Push pour votre entreprise.',
+      details: { push_envoyes: 0, echecs: 0 }
+    });
+  }
 
-      // Enregistrer l'historique des notifications
-      for (const row of tokensResult.rows) {
-        await pool.query(
-          `INSERT INTO notifications (client_id, message, canal, statut) VALUES ($1, $2, 'push', 'envoyé')`,
-          [row.client_id, campagne.message]
-        );
-      }
+  // 2. Historisation de la notification dans la BDD pour chaque client
+  for (const row of tokensResult.rows) {
+    await pool.query(
+      `INSERT INTO notifications (client_id, message, canal, statut) 
+       VALUES ($1, $2, 'push', 'envoyé') 
+       ON CONFLICT DO NOTHING`,
+      [row.client_id, campagne.message]
+    );
+  }
 
-      const tokens = tokensResult.rows.map(r => r.token);
-      const result = await envoyerNotificationPush(tokens, campagne.titre, campagne.message);
+  // 3. Extraction de la liste des tokens et envoi groupé
+  const tokens = tokensResult.rows.map(r => r.token);
 
-      if (result) {
-        pushEnvoyes = result.successCount || 0;
-        echecs = result.failureCount || 0;
-      }
-    }
+  const result = await envoyerNotificationPush(
+    tokens,
+    campagne.titre,
+    campagne.message,
+    nomEntreprise
+  );
+
+  if (result) {
+    pushEnvoyes = result.successCount || 0;
+    echecs = result.failureCount || 0;
+  }
+}
 
     // 4. Mettre à jour le statut de la campagne
     await pool.query(

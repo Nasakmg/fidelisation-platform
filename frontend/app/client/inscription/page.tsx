@@ -95,13 +95,16 @@ function InscriptionContent() {
 
         {/* Form */}
         <div className="bg-[#0d0d0d] border border-white/[0.06] rounded-2xl p-6">
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4" autoComplete="off">
+            {/* PIÈGE POUR AUTO-COMPLÉTION CHROME (Champs invisibles) */}
+            <input type="text" name="prevent_autofill_username" id="prevent_autofill_username" value="" style={{ display: 'none' }} tabIndex={-1} readOnly />
+            <input type="password" name="prevent_autofill_password" id="prevent_autofill_password" value="" style={{ display: 'none' }} tabIndex={-1} readOnly />
             {[
-              { name: 'nom', label: 'Nom', placeholder: 'Diallo', icon: User },
-              { name: 'prenom', label: 'Prénom', placeholder: 'Amadou', icon: User },
-              { name: 'email', label: 'Email', placeholder: 'amadou@gmail.com', icon: Mail, type: 'email' },
-              { name: 'telephone', label: 'Téléphone', placeholder: '771234567', icon: Phone, type: 'tel' },
-              { name: 'mot_de_passe', label: 'Mot de passe', placeholder: '••••••••', icon: Lock, type: 'password' },
+              { name: 'nom', label: 'Nom', placeholder: '', icon: User, autoComplete: 'one-time-code' },
+              { name: 'prenom', label: 'Prénom', placeholder: '', icon: User, autoComplete: 'one-time-code' },
+              { name: 'email', label: 'Email', placeholder: '', icon: Mail, type: 'email', autoComplete: 'one-time-code' },
+              { name: 'telephone', label: 'Téléphone', placeholder: '', icon: Phone, type: 'tel', autoComplete: 'one-time-code' },
+              { name: 'mot_de_passe', label: 'Mot de passe', placeholder: '••••••••', icon: Lock, type: 'password', autoComplete: 'new-password' },
             ].map((field) => (
               <div key={field.name} className="space-y-1">
                 <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -114,6 +117,7 @@ function InscriptionContent() {
                     name={field.name}
                     value={formData[field.name as keyof typeof formData]}
                     onChange={handleChange}
+                    autoComplete={field.autoComplete}
                     className="w-full bg-white/[0.04] border border-white/[0.08] text-white rounded-xl pl-10 pr-4 py-3 focus:outline-none focus:border-yellow-500/50 transition-all placeholder:text-gray-700 text-sm"
                     placeholder={field.placeholder}
                     required
