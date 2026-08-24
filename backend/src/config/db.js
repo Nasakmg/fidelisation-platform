@@ -47,4 +47,14 @@ const connectWithRetry = async () => {
 
 connectWithRetry();
 
+// Ping automatique toutes les 5 minutes pour maintenir Supabase actif
+setInterval(async () => {
+  try {
+    await pool.query('SELECT 1');
+    console.log('✅ Ping Supabase OK');
+  } catch (err) {
+    console.error('❌ Ping Supabase échoué:', err.message);
+  }
+}, 5 * 60 * 1000);
+
 module.exports = pool;
