@@ -5,25 +5,41 @@ const ISSUER_ID = process.env.GOOGLE_WALLET_ISSUER_ID;
 const CLASS_ID = `${ISSUER_ID}.fidelisation_card`;
 
 const getCredentials = () => {
-  const email = process.env.FIREBASE_CLIENT_EMAIL || process.env.GOOGLE_CLIENT_EMAIL;
-  let rawKey = process.env.FIREBASE_PRIVATE_KEY || process.env.GOOGLE_PRIVATE_KEY;
+  // 1. Essai via la variable JSON complète
+  if (process.env.GOOGLE_SERVICE_ACCOUNT_JSON) {
+    try {
+      let rawEnv = process.env.GOOGLE_SERVICE_ACCOUNT_JSON.trim();
+      
+      // Nettoyage des guillemets superflus entourant la chaîne si présents
+      if ((rawEnv.startsWith('"') && rawEnv.endsWith('"')) || (rawEnv.startsWith("'") && rawEnv.endsWith("'"))) {
+        rawEnv = rawEnv.slice(1, -1);
+      }
 
-  if (!email || !rawKey) {
-    console.error('❌ Email ou clé privée introuvable dans l’environnement');
+      const creds = JSON.parse(rawEnv);
+      if (creds && creds.private_key) {
+        creds.private_key = creds.private_key.replace(/\\n/g, '\n');
+      }
+      return creds;
+    } catch (err) {
+      console.error('❌ Erreur parsing GOOGLE_SERVICE_ACCOUNT_JSON:', err.message);
+    }
+  }
+
+  // 2. Fallback via variables séparées
+  const email = process.env.FIREBASE_CLIENT_EMAIL || process.env.GOOGLE_CLIENT_EMAIL;
+  let privateKey = process.env.FIREBASE_PRIVATE_KEY || process.env.GOOGLE_PRIVATE_KEY;
+
+  if (!email || !privateKey) {
+    console.error('❌ Aucun identifiant Google Wallet valide trouvé dans l’environnement');
     return null;
   }
 
-  // Nettoyage critique de la clé RSA pour Node.js / OpenSSL
-  let formattedKey = rawKey
-    .trim()
-    .replace(/^["']|["']$/g, '') // Retire d'éventuels guillemets autour de la clé
-    .replace(/\\n/g, '\n')       // Convertit \n texte en vrais retours à la ligne
-    .replace(/\r/g, '');         // Supprime les retours chariot Windows
+  privateKey = privateKey
+    .replace(/\\n/g, '\n')
+    .replace(/^["']|["']$/g, '')
+    .trim();
 
-  return {
-    client_email: email,
-    private_key: formattedKey,
-  };
+  return { client_email: email, private_key: privateKey };
 };
 
 const creerClasseCarte = async () => {
