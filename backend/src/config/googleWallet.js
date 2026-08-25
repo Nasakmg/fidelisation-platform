@@ -4,37 +4,28 @@ const { GoogleAuth } = require('google-auth-library');
 const ISSUER_ID = process.env.GOOGLE_WALLET_ISSUER_ID;
 const CLASS_ID = `${ISSUER_ID}.fidelisation_card`;
 
-// Récupération des identifiants
 const getCredentials = () => {
-  if (process.env.GOOGLE_SERVICE_ACCOUNT_JSON) {
-    try {
-      let rawEnv = process.env.GOOGLE_SERVICE_ACCOUNT_JSON.trim();
-      
-      // Si la chaîne commence ou finit par des guillemets superflus, on les retire
-      if (rawEnv.startsWith('"') && rawEnv.endsWith('"')) {
-        rawEnv = rawEnv.slice(1, -1);
-      }
+  const email = process.env.FIREBASE_CLIENT_EMAIL || process.env.GOOGLE_CLIENT_EMAIL;
+  let rawKey = process.env.FIREBASE_PRIVATE_KEY || process.env.GOOGLE_PRIVATE_KEY;
 
-      const creds = JSON.parse(rawEnv);
-      if (creds && creds.private_key) {
-        creds.private_key = creds.private_key.replace(/\\n/g, '\n');
-      }
-      return creds;
-    } catch (err) {
-      console.error('❌ Erreur parsing GOOGLE_SERVICE_ACCOUNT_JSON:', err.message);
-      return null;
-    }
+  if (!email || !rawKey) {
+    console.error('❌ Email ou clé privée introuvable dans l’environnement');
+    return null;
   }
 
-  const email = process.env.FIREBASE_CLIENT_EMAIL || process.env.GOOGLE_CLIENT_EMAIL;
-  let privateKey = process.env.FIREBASE_PRIVATE_KEY || process.env.GOOGLE_PRIVATE_KEY;
+  // Nettoyage critique de la clé RSA pour Node.js / OpenSSL
+  let formattedKey = rawKey
+    .trim()
+    .replace(/^["']|["']$/g, '') // Retire d'éventuels guillemets autour de la clé
+    .replace(/\\n/g, '\n')       // Convertit \n texte en vrais retours à la ligne
+    .replace(/\r/g, '');         // Supprime les retours chariot Windows
 
-  if (!email || !privateKey) return null;
-
-  privateKey = privateKey.replace(/\\n/g, '\n').replace(/^"|"$/g, '').trim();
-  return { client_email: email, private_key: privateKey };
+  return {
+    client_email: email,
+    private_key: formattedKey,
+  };
 };
-// Initialisation de la classe de carte sur Google Wallet
+
 const creerClasseCarte = async () => {
   const credentials = getCredentials();
   if (!credentials) return;
@@ -53,7 +44,7 @@ const creerClasseCarte = async () => {
       programName: 'Carte de Fidélité',
       programLogo: {
         sourceUri: {
-          uri: 'https://image.similarpng.com/file/similarpng/very-thumbnail/2020/12/Google-wallet-logo-in-flat-design-on-transparent-background-PNG.png',
+          uri: 'https://i.imgur.com/8Q73v2E.png',
         },
         contentDescription: {
           defaultValue: { language: 'fr', value: 'Logo' },
@@ -83,7 +74,6 @@ const creerClasseCarte = async () => {
   }
 };
 
-// Génération du lien Google Wallet
 const genererLienWallet = async (client) => {
   const credentials = getCredentials();
   if (!credentials) {
@@ -91,9 +81,8 @@ const genererLienWallet = async (client) => {
   }
 
   try {
-    const qrValue = client.qr_code || String(client.id || '123456');
-    // Forcer un ID d'objet unique à chaque clic pour éviter le cache Android
-    const objectId = `${ISSUER_ID}.${qrValue.replace(/[^a-zA-Z0-9_.-]/g, '_')}_${Date.now()}`;
+    const qrValue = (client.qr_code || String(client.id || '123456')).replace(/[^a-zA-Z0-9]/g, '');
+    const objectId = `${ISSUER_ID}.${qrValue}_${Date.now()}`;
     const points = parseInt(client.points_total, 10) || 0;
     const nomClient = `${client.nom || ''} ${client.prenom || ''}`.trim() || 'Client E-Wallet';
 
