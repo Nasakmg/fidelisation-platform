@@ -4,35 +4,37 @@ const { GoogleAuth } = require('google-auth-library');
 const ISSUER_ID = process.env.GOOGLE_WALLET_ISSUER_ID;
 const CLASS_ID = `${ISSUER_ID}.fidelisation_card`;
 
-// Récupération des identifiants depuis le .env
+// Récupération des identifiants
 const getCredentials = () => {
-  const email = process.env.FIREBASE_CLIENT_EMAIL;
-  let privateKey = process.env.FIREBASE_PRIVATE_KEY;
+  if (process.env.GOOGLE_SERVICE_ACCOUNT_JSON) {
+    try {
+      const creds = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
+      if (creds.private_key) {
+        creds.private_key = creds.private_key.replace(/\\n/g, '\n');
+      }
+      return creds;
+    } catch (err) {
+      console.error('❌ Erreur parsing GOOGLE_SERVICE_ACCOUNT_JSON:', err.message);
+    }
+  }
+
+  const email = process.env.FIREBASE_CLIENT_EMAIL || process.env.GOOGLE_CLIENT_EMAIL;
+  let privateKey = process.env.FIREBASE_PRIVATE_KEY || process.env.GOOGLE_PRIVATE_KEY;
 
   if (!email || !privateKey) {
-    console.error('❌ FIREBASE_CLIENT_EMAIL ou FIREBASE_PRIVATE_KEY manquant dans le .env');
+    console.error('❌ Identifiants Google manquants');
     return null;
   }
 
-  // Nettoyage et conversion des sauts de ligne de la clé privée
-  privateKey = privateKey
-    .replace(/\\n/g, '\n')
-    .replace(/^"|"$/g, '')
-    .trim();
+  privateKey = privateKey.replace(/\\n/g, '\n').replace(/^"|"$/g, '').trim();
 
-  return {
-    client_email: email,
-    private_key: privateKey,
-  };
+  return { client_email: email, private_key: privateKey };
 };
 
 // Initialisation de la classe de carte sur Google Wallet
 const creerClasseCarte = async () => {
   const credentials = getCredentials();
-  if (!credentials) {
-    console.log('ℹ️ Google Wallet non configuré');
-    return;
-  }
+  if (!credentials) return;
 
   try {
     const auth = new GoogleAuth({
@@ -45,16 +47,13 @@ const creerClasseCarte = async () => {
     const classeData = {
       id: CLASS_ID,
       issuerName: 'E-Wallet',
-      programName: 'Carte de Fidélité E-Wallet',
+      programName: 'Carte de Fidélité',
       programLogo: {
         sourceUri: {
-          uri: 'https://w7.pngwing.com/pngs/313/559/png-transparent-google-wallet-logo-thumbnail-tech-companies-thumbnail.png',
+          uri: 'https://cdn-icons-png.flaticon.com/512/1041/1041883.png',
         },
         contentDescription: {
-          defaultValue: {
-            language: 'fr',
-            value: 'Logo E-Wallet',
-          },
+          defaultValue: { language: 'fr', value: 'Logo' },
         },
       },
       hexBackgroundColor: '#EAB308',
@@ -81,7 +80,7 @@ const creerClasseCarte = async () => {
   }
 };
 
-// Génération du lien Google Wallet avec QR Code
+// Génération du lien Google Wallet
 const genererLienWallet = async (client) => {
   const credentials = getCredentials();
   if (!credentials) {
@@ -89,7 +88,11 @@ const genererLienWallet = async (client) => {
   }
 
   try {
-    const objectId = `${ISSUER_ID}.${client.qr_code}`;
+    const qrValue = client.qr_code || String(client.id || '123456');
+    // Forcer un ID d'objet unique à chaque clic pour éviter le cache Android
+    const objectId = `${ISSUER_ID}.${qrValue.replace(/[^a-zA-Z0-9_.-]/g, '_')}_${Date.now()}`;
+    const points = parseInt(client.points_total, 10) || 0;
+    const nomClient = `${client.nom || ''} ${client.prenom || ''}`.trim() || 'Client E-Wallet';
 
     const objetCarte = {
       id: objectId,
@@ -97,29 +100,17 @@ const genererLienWallet = async (client) => {
       state: 'ACTIVE',
       barcode: {
         type: 'QR_CODE',
-        value: client.qr_code,
-        alternateText: client.qr_code,
+        value: qrValue,
+        alternateText: qrValue,
       },
       cardTitle: {
         defaultValue: { language: 'fr', value: 'E-Wallet' },
       },
       header: {
-        defaultValue: { language: 'fr', value: `${client.nom} ${client.prenom}` },
+        defaultValue: { language: 'fr', value: nomClient },
       },
-      textModulesData: [
-        {
-          header: 'Points fidélité',
-          body: `${client.points_total} points`,
-          id: 'points',
-        },
-        {
-          header: 'Membre depuis',
-          body: new Date(client.created_at).toLocaleDateString('fr-FR'),
-          id: 'membre',
-        },
-      ],
       loyaltyPoints: {
-        balance: { int: client.points_total },
+        balance: { int: points },
         label: 'Points',
       },
     };
@@ -127,7 +118,7 @@ const genererLienWallet = async (client) => {
     const claims = {
       iss: credentials.client_email,
       aud: 'google',
-      origins: ['https://fidelisation-platform.vercel.app', 'http://localhost:3000'],
+      origins: [],
       typ: 'savetowallet',
       payload: {
         loyaltyObjects: [objetCarte],
