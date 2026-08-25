@@ -8,23 +8,31 @@ const CLASS_ID = `${ISSUER_ID}.fidelisation_card`;
 const getCredentials = () => {
   if (process.env.GOOGLE_SERVICE_ACCOUNT_JSON) {
     try {
-      let content = process.env.GOOGLE_SERVICE_ACCOUNT_JSON.trim();
+      let rawEnv = process.env.GOOGLE_SERVICE_ACCOUNT_JSON.trim();
       
-      // Si la variable est en Base64, on la décode d'abord
-      if (!content.startsWith('{')) {
-        content = Buffer.from(content, 'base64').toString('utf8');
+      // Si la chaîne commence ou finit par des guillemets superflus, on les retire
+      if (rawEnv.startsWith('"') && rawEnv.endsWith('"')) {
+        rawEnv = rawEnv.slice(1, -1);
       }
-      
-      const creds = JSON.parse(content);
+
+      const creds = JSON.parse(rawEnv);
       if (creds && creds.private_key) {
         creds.private_key = creds.private_key.replace(/\\n/g, '\n');
       }
       return creds;
     } catch (err) {
       console.error('❌ Erreur parsing GOOGLE_SERVICE_ACCOUNT_JSON:', err.message);
+      return null;
     }
   }
-  return null;
+
+  const email = process.env.FIREBASE_CLIENT_EMAIL || process.env.GOOGLE_CLIENT_EMAIL;
+  let privateKey = process.env.FIREBASE_PRIVATE_KEY || process.env.GOOGLE_PRIVATE_KEY;
+
+  if (!email || !privateKey) return null;
+
+  privateKey = privateKey.replace(/\\n/g, '\n').replace(/^"|"$/g, '').trim();
+  return { client_email: email, private_key: privateKey };
 };
 // Initialisation de la classe de carte sur Google Wallet
 const creerClasseCarte = async () => {
