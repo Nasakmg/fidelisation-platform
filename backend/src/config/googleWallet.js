@@ -8,8 +8,15 @@ const CLASS_ID = `${ISSUER_ID}.fidelisation_card`;
 const getCredentials = () => {
   if (process.env.GOOGLE_SERVICE_ACCOUNT_JSON) {
     try {
-      const creds = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
-      if (creds.private_key) {
+      let content = process.env.GOOGLE_SERVICE_ACCOUNT_JSON.trim();
+      
+      // Si la variable est en Base64, on la décode d'abord
+      if (!content.startsWith('{')) {
+        content = Buffer.from(content, 'base64').toString('utf8');
+      }
+      
+      const creds = JSON.parse(content);
+      if (creds && creds.private_key) {
         creds.private_key = creds.private_key.replace(/\\n/g, '\n');
       }
       return creds;
@@ -17,20 +24,8 @@ const getCredentials = () => {
       console.error('❌ Erreur parsing GOOGLE_SERVICE_ACCOUNT_JSON:', err.message);
     }
   }
-
-  const email = process.env.FIREBASE_CLIENT_EMAIL || process.env.GOOGLE_CLIENT_EMAIL;
-  let privateKey = process.env.FIREBASE_PRIVATE_KEY || process.env.GOOGLE_PRIVATE_KEY;
-
-  if (!email || !privateKey) {
-    console.error('❌ Identifiants Google manquants');
-    return null;
-  }
-
-  privateKey = privateKey.replace(/\\n/g, '\n').replace(/^"|"$/g, '').trim();
-
-  return { client_email: email, private_key: privateKey };
+  return null;
 };
-
 // Initialisation de la classe de carte sur Google Wallet
 const creerClasseCarte = async () => {
   const credentials = getCredentials();
@@ -50,7 +45,7 @@ const creerClasseCarte = async () => {
       programName: 'Carte de Fidélité',
       programLogo: {
         sourceUri: {
-          uri: 'https://cdn-icons-png.flaticon.com/512/1041/1041883.png',
+          uri: 'https://image.similarpng.com/file/similarpng/very-thumbnail/2020/12/Google-wallet-logo-in-flat-design-on-transparent-background-PNG.png',
         },
         contentDescription: {
           defaultValue: { language: 'fr', value: 'Logo' },
