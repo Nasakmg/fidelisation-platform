@@ -1,3 +1,5 @@
+const fs = require('fs');
+const path = require('path');
 const jwt = require('jsonwebtoken');
 const { GoogleAuth } = require('google-auth-library');
 
@@ -5,46 +7,68 @@ const ISSUER_ID = process.env.GOOGLE_WALLET_ISSUER_ID;
 const CLASS_ID = `${ISSUER_ID}.fidelisation_card`;
 
 const getCredentials = () => {
-  // 1. Essai via la variable JSON complète
+  // 1. Production (Render) : Base64
+  if (process.env.GOOGLE_SERVICE_ACCOUNT_BASE64) {
+    try {
+      const decoded = Buffer.from(process.env.GOOGLE_SERVICE_ACCOUNT_BASE64, 'base64').toString('utf8');
+      const creds = JSON.parse(decoded);
+      if (creds && creds.private_key) {
+        creds.private_key = creds.private_key.replace(/\\n/g, '\n');
+      }
+      return creds;
+    } catch (err) {
+      console.error('❌ Erreur décodage Base64:', err.message);
+    }
+  }
+
+  // 2. Production (Render) : JSON brut
   if (process.env.GOOGLE_SERVICE_ACCOUNT_JSON) {
     try {
       let rawEnv = process.env.GOOGLE_SERVICE_ACCOUNT_JSON.trim();
-      
-      // Nettoyage des guillemets superflus entourant la chaîne si présents
       if ((rawEnv.startsWith('"') && rawEnv.endsWith('"')) || (rawEnv.startsWith("'") && rawEnv.endsWith("'"))) {
         rawEnv = rawEnv.slice(1, -1);
       }
-
       const creds = JSON.parse(rawEnv);
       if (creds && creds.private_key) {
         creds.private_key = creds.private_key.replace(/\\n/g, '\n');
       }
       return creds;
     } catch (err) {
-      console.error('❌ Erreur parsing GOOGLE_SERVICE_ACCOUNT_JSON:', err.message);
+      console.error('❌ Erreur parsing JSON:', err.message);
     }
   }
 
-  // 2. Fallback via variables séparées
+  // 3. Fallback Variables séparées
   const email = process.env.FIREBASE_CLIENT_EMAIL || process.env.GOOGLE_CLIENT_EMAIL;
   let privateKey = process.env.FIREBASE_PRIVATE_KEY || process.env.GOOGLE_PRIVATE_KEY;
-
-  if (!email || !privateKey) {
-    console.error('❌ Aucun identifiant Google Wallet valide trouvé dans l’environnement');
-    return null;
+  if (email && privateKey) {
+    privateKey = privateKey.replace(/\\n/g, '\n').replace(/^["']|["']$/g, '').trim();
+    return { client_email: email, private_key: privateKey };
   }
 
-  privateKey = privateKey
-    .replace(/\\n/g, '\n')
-    .replace(/^["']|["']$/g, '')
-    .trim();
+  // 4. Local : Lecture directe du fichier JSON local si présent
+  const localJsonPath = path.join(__dirname, 'fidelitewalletperso-789d16de0a70.json');
+  if (fs.existsSync(localJsonPath)) {
+    try {
+      const creds = JSON.parse(fs.readFileSync(localJsonPath, 'utf8'));
+      if (creds && creds.private_key) {
+        creds.private_key = creds.private_key.replace(/\\n/g, '\n');
+      }
+      return creds;
+    } catch (err) {
+      console.error('❌ Erreur lecture fichier JSON local:', err.message);
+    }
+  }
 
-  return { client_email: email, private_key: privateKey };
+  return null;
 };
 
 const creerClasseCarte = async () => {
   const credentials = getCredentials();
-  if (!credentials) return;
+  if (!credentials) {
+    console.log('⚠️ Google Wallet désactivé : Clé d’accès introuvable');
+    return;
+  }
 
   try {
     const auth = new GoogleAuth({
