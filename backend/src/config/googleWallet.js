@@ -76,7 +76,6 @@ const genererLienWallet = async (client) => {
     throw new Error('Identifiants Google Wallet invalides ou manquants.');
   }
 
-  // ID de la classe exacte présente sur votre console
   const classId = `${issuerId}.fidelisation_card`;
   const objectId = `${issuerId}.${client.id}_${Date.now()}`;
 
@@ -86,12 +85,13 @@ const genererLienWallet = async (client) => {
     origins: [process.env.FRONTEND_URL || 'https://fidelisation-platform.vercel.app'],
     typ: 'savetowallet',
     payload: {
-      // ⚠️ Utiliser loyaltyObjects et non genericObjects pour une carte de fidélité
       loyaltyObjects: [
         {
           id: objectId,
           classId: classId,
           state: 'ACTIVE',
+          programName: 'Programme de Fidélité',
+          issuerName: 'E-Wallet',
           accountName: `${client.prenom || ''} ${client.nom || ''}`.trim() || 'Client',
           accountId: client.qr_code || String(client.id),
           barcode: {
