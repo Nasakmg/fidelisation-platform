@@ -9,15 +9,11 @@ const CLASS_ID = `${ISSUER_ID}.fidelisation_card`;
 const getCredentials = () => {
   let creds = null;
 
-  // 1. Production (Render) : Décodage Base64 avec nettoyage des retours à la ligne bruts
+  // 1. Production (Render) : Décodage Base64
   if (process.env.GOOGLE_SERVICE_ACCOUNT_BASE64) {
     try {
       const base64Str = process.env.GOOGLE_SERVICE_ACCOUNT_BASE64.trim();
-      let decoded = Buffer.from(base64Str, 'base64').toString('utf8');
-      
-      // Remplacement des vrais retours à la ligne dans la chaîne JSON décodée
-      decoded = decoded.replace(/[\r\n]+/g, '\\n');
-      
+      const decoded = Buffer.from(base64Str, 'base64').toString('utf8');
       creds = JSON.parse(decoded);
     } catch (err) {
       console.error('❌ Erreur décodage Base64:', err.message);
@@ -36,12 +32,25 @@ const getCredentials = () => {
     }
   }
 
-  // Traitement critique pour la clé RSA sous Node.js
+  // Reconstitution stricte du format PEM pour la clé RSA
   if (creds && creds.private_key) {
-    creds.private_key = creds.private_key
-      .replace(/\\n/g, '\n')
-      .replace(/^["']|["']$/g, '')
-      .trim();
+    let key = creds.private_key;
+    
+    // Nettoyage des antislashs échappés et guillemets
+    key = key.replace(/\\n/g, '\n').replace(/^["']|["']$/g, '').trim();
+
+    // Si la clé a perdu ses retours à la ligne, on la reformate
+    if (!key.includes('\n')) {
+      const body = key
+        .replace('-----BEGIN PRIVATE KEY-----', '')
+        .replace('-----END PRIVATE KEY-----', '')
+        .replace(/\s+/g, '');
+      
+      const formattedBody = body.match(/.{1,64}/g)?.join('\n') || body;
+      key = `-----BEGIN PRIVATE KEY-----\n${formattedBody}\n-----END PRIVATE KEY-----`;
+    }
+
+    creds.private_key = key;
   }
 
   return creds;
