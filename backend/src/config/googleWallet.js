@@ -1,6 +1,7 @@
 const path = require('path');
 const fs = require('fs');
 const { google } = require('googleapis');
+const jwt = require('jsonwebtoken');
 
 // 1. Récupération des identifiants
 const getCredentials = () => {
@@ -43,7 +44,7 @@ const getCredentials = () => {
   return creds;
 };
 
-// 2. Initialisation du client Google Wallet & Création de la classe
+// 2. Initialisation du client Google Wallet
 const creerClasseCarte = async () => {
   const creds = getCredentials();
   if (!creds) {
@@ -58,7 +59,7 @@ const creerClasseCarte = async () => {
     });
 
     const walletClient = google.walletobjects({ version: 'v1', auth });
-    console.log("✅ Classe carte Google Wallet prête");
+    console.log("✅ Client Google Wallet prêt");
     return walletClient;
   } catch (error) {
     console.error("❌ Erreur lors de l'initialisation de Google Wallet :", error.message);
@@ -66,8 +67,57 @@ const creerClasseCarte = async () => {
   }
 };
 
-// 3. EXPORTS : Exportation explicite de toutes les fonctions requises par index.js et les routes
+// 3. Génération du lien d'ajout à Google Wallet (JWT)
+const genererLienWallet = async (client) => {
+  const creds = getCredentials();
+  const issuerId = process.env.GOOGLE_WALLET_ISSUER_ID || '3388000000023148271';
+
+  if (!creds || !creds.client_email || !creds.private_key) {
+    throw new Error('Identifiants Google Wallet invalides ou manquants.');
+  }
+
+  // Identifiants uniques pour l'objet et la classe
+  const classId = `${issuerId}.carte_fidelite_class`;
+  const objectId = `${issuerId}.${client.id}_${Date.now()}`;
+
+  // Structure du Payload exigée par Google Pay API
+  const claims = {
+    iss: creds.client_email,
+    aud: 'google',
+    origins: [process.env.FRONTEND_URL || 'https://fidelisation-platform.vercel.app'],
+    typ: 'savetowallet',
+    payload: {
+      genericObjects: [
+        {
+          id: objectId,
+          classId: classId,
+          state: 'ACTIVE',
+          header: {
+            defaultValue: {
+              language: 'fr-FR',
+              value: `${client.prenom || ''} ${client.nom || ''}`.trim() || 'Client',
+            },
+          },
+          barcode: {
+            type: 'QR_CODE',
+            value: client.qr_code || String(client.id),
+            alternateText: client.qr_code || String(client.id),
+          },
+        },
+      ],
+    },
+  };
+
+  // Signature du jeton JWT avec la clé privée
+  const token = jwt.sign(claims, creds.private_key, { algorithm: 'RS256' });
+
+  // URL finale vers Google Pay
+  return `https://pay.google.com/gp/v/save/${token}`;
+};
+
+// 4. EXPORTS : Exportation de toutes les fonctions
 module.exports = {
   getCredentials,
   creerClasseCarte,
+  genererLienWallet,
 };
