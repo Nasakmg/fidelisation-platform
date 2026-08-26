@@ -1,5 +1,6 @@
 'use client';
-import { useState, useEffect } from 'react';
+
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import { useClientAuth } from '../context/ClientAuthContext';
@@ -18,11 +19,28 @@ export default function ProfilPage() {
   const [walletLoading, setWalletLoading] = useState(false);
   const [chargement, setChargement] = useState(true);
 
+  const fetchProfil = useCallback(async () => {
+    try {
+      const response = await axios.get(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/clients/profil`,
+        { headers: { Authorization: `Bearer ${clientToken}` } }
+      );
+      setClient(response.data);
+    } catch (err) {
+      console.error('Erreur récupération profil:', err);
+    } finally {
+      setChargement(false);
+    }
+  }, [clientToken]);
+
   useEffect(() => {
-    if (!clientToken) { router.push('/client'); return; }
+    if (!clientToken) { 
+      router.push('/client'); 
+      return; 
+    }
+
     fetchProfil();
 
-    // Firebase Push uniquement côté client
     if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
       const setupPush = async () => {
         try {
@@ -30,7 +48,7 @@ export default function ProfilPage() {
           const fcmToken = await requestNotificationPermission();
 
           if (fcmToken) {
-            const response = await axios.post(
+            await axios.post(
               `${process.env.NEXT_PUBLIC_API_URL}/api/clients/fcm-token`,
               { token: fcmToken },
               { headers: { Authorization: `Bearer ${clientToken}` } }
@@ -44,44 +62,41 @@ export default function ProfilPage() {
 
       setupPush();
     }
-  }, [clientToken]);
-  const fetchProfil = async () => {
-    try {
-      const response = await axios.get(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/clients/profil`,
-        { headers: { Authorization: `Bearer ${clientToken}` } }
-      );
-      setClient(response.data);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setChargement(false);
-    }
-  };
+  }, [clientToken, router, fetchProfil]);
 
   const handleGoogleWallet = async () => {
-    setWalletLoading(true);
-    try {
-      const response = await axios.get(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/clients/wallet`,
-        { headers: { Authorization: `Bearer ${clientToken}` } }
-      );
-      window.open(response.data.lien_wallet, '_blank');
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setWalletLoading(false);
-    }
-  };
+  setWalletLoading(true);
+  try {
+    // 1. Requête POST pour correspondre à la route backend
+    const response = await axios.post(
+      `${process.env.NEXT_PUBLIC_API_URL}/api/clients/wallet`,
+      {},
+      { headers: { Authorization: `Bearer ${clientToken}` } }
+    );
 
-  const getBadge = (points: number) => {
+    // 2. Récupération de l'URL du lien wallet (saveUrl ou url)
+    const walletUrl = response.data?.saveUrl || response.data?.url;
+
+    if (walletUrl) {
+      window.location.href = walletUrl; // Redirection directe vers Google Wallet
+    } else {
+      console.error('❌ Lien Google Wallet introuvable dans la réponse.');
+    }
+  } catch (err: any) {
+    console.error('❌ Erreur Google Wallet:', err?.response?.data || err.message);
+  } finally {
+    setWalletLoading(false);
+  }
+};
+
+  const getBadge = (points: number = 0) => {
     if (points >= 500) return { label: 'VIP', icon: Crown, color: 'text-yellow-400', bg: 'bg-yellow-400/10 border-yellow-400/20' };
     if (points >= 200) return { label: 'Gold', icon: Star, color: 'text-orange-400', bg: 'bg-orange-400/10 border-orange-400/20' };
     if (points >= 100) return { label: 'Silver', icon: Star, color: 'text-gray-300', bg: 'bg-gray-300/10 border-gray-300/20' };
     return { label: 'Bronze', icon: Star, color: 'text-amber-600', bg: 'bg-amber-600/10 border-amber-600/20' };
   };
 
-  const getProchainNiveau = (points: number) => {
+  const getProchainNiveau = (points: number = 0) => {
     if (points < 100) return { label: 'Silver', manque: 100 - points, total: 100 };
     if (points < 200) return { label: 'Gold', manque: 200 - points, total: 200 };
     if (points < 500) return { label: 'VIP', manque: 500 - points, total: 500 };
@@ -96,16 +111,19 @@ export default function ProfilPage() {
     );
   }
 
-  const badge = getBadge(client?.points_total || 0);
+  const pointsTotal = client?.points_total || 0;
+  const badge = getBadge(pointsTotal);
   const BadgeIcon = badge.icon;
-  const prochainNiveau = getProchainNiveau(client?.points_total || 0);
+  const prochainNiveau = getProchainNiveau(pointsTotal);
   const progression = prochainNiveau
-    ? ((client?.points_total / prochainNiveau.total) * 100)
+    ? Math.min(100, Math.max(0, (pointsTotal / prochainNiveau.total) * 100))
     : 100;
+
+  // Initiales sécurisées
+  const initials = `${client?.nom?.[0] || ''}${client?.prenom?.[0] || ''}`.toUpperCase();
 
   return (
     <div className="min-h-screen bg-[#080808] pb-10">
-
       <div className="relative bg-gradient-to-b from-yellow-500/10 to-transparent pt-12 pb-20 px-6 text-center">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(234,179,8,0.12)_0%,transparent_70%)]" />
 
@@ -124,7 +142,7 @@ export default function ProfilPage() {
         >
           <div className="w-20 h-20 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-lg shadow-yellow-500/20">
             <span className="text-black font-bold text-2xl">
-              {client?.nom[0]}{client?.prenom[0]}
+              {initials || '?'}
             </span>
           </div>
           <h1 className="text-white text-xl font-bold mb-1">
@@ -139,7 +157,6 @@ export default function ProfilPage() {
       </div>
 
       <div className="px-4 -mt-10 space-y-4 max-w-md mx-auto">
-
         {/* Points */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -150,7 +167,7 @@ export default function ProfilPage() {
             <div>
               <p className="text-gray-500 text-sm">Vos points fidélité</p>
               <p className="text-4xl font-bold text-white mt-1">
-                {client?.points_total}
+                {pointsTotal}
                 <span className="text-yellow-400 text-lg ml-1">pts</span>
               </p>
             </div>
@@ -190,7 +207,7 @@ export default function ProfilPage() {
           <div className="flex flex-col items-center">
             <div className="bg-white p-4 rounded-2xl shadow-lg mb-4">
               <QRCodeSVG
-                value={client?.qr_code || ''}
+                value={client?.qr_code || 'N/A'}
                 size={180}
                 level="H"
                 includeMargin={false}
@@ -198,7 +215,7 @@ export default function ProfilPage() {
             </div>
             <div className="flex items-center gap-2 bg-white/[0.04] border border-white/[0.06] rounded-xl px-4 py-2">
               <span className="font-mono text-yellow-400 text-sm font-bold">
-                {client?.qr_code}
+                {client?.qr_code || '---'}
               </span>
             </div>
           </div>
@@ -237,9 +254,11 @@ export default function ProfilPage() {
               <span className="text-gray-400 text-sm">Membre depuis</span>
             </div>
             <span className="text-white text-sm font-medium">
-              {new Date(client?.created_at).toLocaleDateString('fr-FR', {
-                day: 'numeric', month: 'long', year: 'numeric'
-              })}
+              {client?.created_at
+                ? new Date(client.created_at).toLocaleDateString('fr-FR', {
+                    day: 'numeric', month: 'long', year: 'numeric'
+                  })
+                : '---'}
             </span>
           </div>
           <div className="border-t border-white/[0.04] mt-2 pt-2 flex items-center justify-between py-2">
