@@ -2,6 +2,7 @@ const pool = require('../config/db');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
+const { getCredentials } = require('../config/googleWallet');
 
 const inscrireClient = async (req, res) => {
   const { nom, prenom, email, telephone, mot_de_passe, date_naissance, entreprise_qr } = req.body;
@@ -125,4 +126,82 @@ const profilClient = async (req, res) => {
   }
 };
 
-module.exports = { inscrireClient, connecterClient, profilClient };
+// Generer le lien JWT d'ajout a Google Wallet
+const genererLienWallet = async (req, res) => {
+  try {
+    const clientId = req.user ? req.user.id : req.body.client_id;
+    
+    if (!clientId) {
+      return res.status(400).json({ message: '❌ ID client manquant' });
+    }
+
+    const result = await pool.query(
+      'SELECT id, nom, prenom, email, qr_code, points_total FROM clients WHERE id = $1',
+      [clientId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: '❌ Client non trouvé' });
+    }
+
+    const client = result.rows[0];
+    const creds = getCredentials();
+
+    if (!creds) {
+      return res.status(500).json({ message: '❌ Identifiants Google Service Account indisponibles' });
+    }
+
+    const issuerId = process.env.GOOGLE_WALLET_ISSUER_ID || '3388000000022802081';
+    const classId = `${issuerId}.carte_fidelite`;
+    const objectId = `${issuerId}.client_${client.id}`;
+
+    // Payload JWT pour l'API Google Wallet
+    const claims = {
+      iss: creds.client_email,
+      aud: 'google',
+      origins: [],
+      typ: 'savetowallet',
+      payload: {
+        loyaltyObjects: [
+          {
+            id: objectId,
+            classId: classId,
+            state: 'ACTIVE',
+            accountId: String(client.id),
+            accountName: `${client.prenom} ${client.nom}`,
+            barcode: {
+              type: 'QR_CODE',
+              value: client.qr_code || `USR-${client.id}`,
+            },
+            loyaltyPoints: {
+              label: 'Points',
+              balance: {
+                string: String(client.points_total || 0),
+              },
+            },
+          },
+        ],
+      },
+    };
+
+    // Signature du token JWT avec la cle privee du Service Account
+    const token = jwt.sign(claims, creds.private_key, { algorithm: 'RS256' });
+    const saveUrl = `https://pay.google.com/gp/v/save/${token}`;
+
+    return res.json({
+      message: '✅ Lien Google Wallet généré avec succès !',
+      url: saveUrl,
+      saveUrl,
+    });
+  } catch (err) {
+    console.error('❌ Erreur genererLienWallet:', err);
+    return res.status(500).json({ message: '❌ Erreur génération Google Wallet', error: err.message });
+  }
+};
+
+module.exports = { 
+  inscrireClient, 
+  connecterClient, 
+  profilClient, 
+  genererLienWallet 
+};
