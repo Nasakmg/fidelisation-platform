@@ -3,64 +3,54 @@ const path = require('path');
 const jwt = require('jsonwebtoken');
 const { GoogleAuth } = require('google-auth-library');
 
-const ISSUER_ID = process.env.GOOGLE_WALLET_ISSUER_ID;
+// const ISSUER_ID = process.env.GOOGLE_WALLET_ISSUER_ID;
 const CLASS_ID = `${ISSUER_ID}.fidelisation_card`;
 
-const getCredentials = () => {
-  // 1. Production (Render) : Base64
-  if (process.env.GOOGLE_SERVICE_ACCOUNT_BASE64) {
-    try {
-      const decoded = Buffer.from(process.env.GOOGLE_SERVICE_ACCOUNT_BASE64, 'base64').toString('utf8');
-      const creds = JSON.parse(decoded);
-      if (creds && creds.private_key) {
-        creds.private_key = creds.private_key.replace(/\\n/g, '\n');
-      }
-      return creds;
-    } catch (err) {
-      console.error('❌ Erreur décodage Base64:', err.message);
-    }
-  }
+// const path = require('path');
+// const fs = require('fs');
+// const jwt = require('jsonwebtoken');
+// const { GoogleAuth } = require('google-auth-library');
 
-  // 2. Production (Render) : JSON brut
+// const ISSUER_ID = process.env.GOOGLE_WALLET_ISSUER_ID;
+// const CLASS_ID = `${ISSUER_ID}.fidelisation_card`;
+
+const getCredentials = () => {
+  let creds = null;
+
+  // 1. Sur Render : lecture depuis la variable d'environnement JSON
   if (process.env.GOOGLE_SERVICE_ACCOUNT_JSON) {
     try {
       let rawEnv = process.env.GOOGLE_SERVICE_ACCOUNT_JSON.trim();
       if ((rawEnv.startsWith('"') && rawEnv.endsWith('"')) || (rawEnv.startsWith("'") && rawEnv.endsWith("'"))) {
         rawEnv = rawEnv.slice(1, -1);
       }
-      const creds = JSON.parse(rawEnv);
-      if (creds && creds.private_key) {
-        creds.private_key = creds.private_key.replace(/\\n/g, '\n');
-      }
-      return creds;
+      creds = JSON.parse(rawEnv);
     } catch (err) {
-      console.error('❌ Erreur parsing JSON:', err.message);
+      console.error('❌ Erreur parsing GOOGLE_SERVICE_ACCOUNT_JSON:', err.message);
     }
   }
 
-  // 3. Fallback Variables séparées
-  const email = process.env.FIREBASE_CLIENT_EMAIL || process.env.GOOGLE_CLIENT_EMAIL;
-  let privateKey = process.env.FIREBASE_PRIVATE_KEY || process.env.GOOGLE_PRIVATE_KEY;
-  if (email && privateKey) {
-    privateKey = privateKey.replace(/\\n/g, '\n').replace(/^["']|["']$/g, '').trim();
-    return { client_email: email, private_key: privateKey };
-  }
-
-  // 4. Local : Lecture directe du fichier JSON local si présent
-  const localJsonPath = path.join(__dirname, 'fidelitewalletperso-789d16de0a70.json');
-  if (fs.existsSync(localJsonPath)) {
-    try {
-      const creds = JSON.parse(fs.readFileSync(localJsonPath, 'utf8'));
-      if (creds && creds.private_key) {
-        creds.private_key = creds.private_key.replace(/\\n/g, '\n');
+  // 2. En local : fallback si la variable n'existe pas ou a échoué
+  if (!creds) {
+    const localJsonPath = path.join(__dirname, 'fidelitewalletperso-789d16de0a70.json');
+    if (fs.existsSync(localJsonPath)) {
+      try {
+        creds = JSON.parse(fs.readFileSync(localJsonPath, 'utf8'));
+      } catch (err) {
+        console.error('❌ Erreur lecture fichier local:', err.message);
       }
-      return creds;
-    } catch (err) {
-      console.error('❌ Erreur lecture fichier JSON local:', err.message);
     }
   }
 
-  return null;
+  // 3. NETTOYAGE CRITIQUE DE LA CLÉ RSA (Valable pour Local et Render)
+  if (creds && creds.private_key) {
+    creds.private_key = creds.private_key
+      .replace(/\\n/g, '\n')
+      .replace(/^["']|["']$/g, '')
+      .trim();
+  }
+
+  return creds;
 };
 
 const creerClasseCarte = async () => {
