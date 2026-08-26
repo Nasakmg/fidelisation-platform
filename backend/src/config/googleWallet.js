@@ -9,30 +9,22 @@ const CLASS_ID = `${ISSUER_ID}.fidelisation_card`;
 const getCredentials = () => {
   let creds = null;
 
-  // 1. Production (Render) : Décodage Base64
+  // 1. Production (Render) : Décodage Base64 avec nettoyage des retours à la ligne bruts
   if (process.env.GOOGLE_SERVICE_ACCOUNT_BASE64) {
     try {
-      const decoded = Buffer.from(process.env.GOOGLE_SERVICE_ACCOUNT_BASE64, 'base64').toString('utf8');
+      const base64Str = process.env.GOOGLE_SERVICE_ACCOUNT_BASE64.trim();
+      let decoded = Buffer.from(base64Str, 'base64').toString('utf8');
+      
+      // Remplacement des vrais retours à la ligne dans la chaîne JSON décodée
+      decoded = decoded.replace(/[\r\n]+/g, '\\n');
+      
       creds = JSON.parse(decoded);
     } catch (err) {
       console.error('❌ Erreur décodage Base64:', err.message);
     }
   }
 
-  // 2. Production (Render Fallback) : JSON brut
-  if (!creds && process.env.GOOGLE_SERVICE_ACCOUNT_JSON) {
-    try {
-      let rawEnv = process.env.GOOGLE_SERVICE_ACCOUNT_JSON.trim();
-      if ((rawEnv.startsWith('"') && rawEnv.endsWith('"')) || (rawEnv.startsWith("'") && rawEnv.endsWith("'"))) {
-        rawEnv = rawEnv.slice(1, -1);
-      }
-      creds = JSON.parse(rawEnv);
-    } catch (err) {
-      console.error('❌ Erreur parsing JSON:', err.message);
-    }
-  }
-
-  // 3. Développement (Local) : Fichier JSON
+  // 2. Développement (Local) : Fichier JSON
   if (!creds) {
     const localJsonPath = path.join(__dirname, 'fidelitewalletperso-789d16de0a70.json');
     if (fs.existsSync(localJsonPath)) {
@@ -44,7 +36,7 @@ const getCredentials = () => {
     }
   }
 
-  // Formatage impératif de la clé RSA pour OpenSSL
+  // Traitement critique pour la clé RSA sous Node.js
   if (creds && creds.private_key) {
     creds.private_key = creds.private_key
       .replace(/\\n/g, '\n')
