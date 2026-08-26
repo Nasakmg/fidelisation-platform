@@ -1,23 +1,16 @@
-const fs = require('fs');
 const path = require('path');
+const fs = require('fs');
 const jwt = require('jsonwebtoken');
 const { GoogleAuth } = require('google-auth-library');
 
-// const ISSUER_ID = process.env.GOOGLE_WALLET_ISSUER_ID;
+// Déclaration explicite pour éviter l'erreur ReferenceError
+const ISSUER_ID = process.env.GOOGLE_WALLET_ISSUER_ID || '3388000000022341234';
 const CLASS_ID = `${ISSUER_ID}.fidelisation_card`;
-
-// const path = require('path');
-// const fs = require('fs');
-// const jwt = require('jsonwebtoken');
-// const { GoogleAuth } = require('google-auth-library');
-
-// const ISSUER_ID = process.env.GOOGLE_WALLET_ISSUER_ID;
-// const CLASS_ID = `${ISSUER_ID}.fidelisation_card`;
 
 const getCredentials = () => {
   let creds = null;
 
-  // 1. Sur Render : lecture depuis la variable d'environnement JSON
+  // 1. Production (Render) : lecture depuis la variable d'environnement JSON
   if (process.env.GOOGLE_SERVICE_ACCOUNT_JSON) {
     try {
       let rawEnv = process.env.GOOGLE_SERVICE_ACCOUNT_JSON.trim();
@@ -30,7 +23,7 @@ const getCredentials = () => {
     }
   }
 
-  // 2. En local : fallback si la variable n'existe pas ou a échoué
+  // 2. Développement (Local) : fallback si la variable n'existe pas
   if (!creds) {
     const localJsonPath = path.join(__dirname, 'fidelitewalletperso-789d16de0a70.json');
     if (fs.existsSync(localJsonPath)) {
@@ -42,7 +35,7 @@ const getCredentials = () => {
     }
   }
 
-  // 3. NETTOYAGE CRITIQUE DE LA CLÉ RSA (Valable pour Local et Render)
+  // 3. Nettoyage de la clé RSA pour Node.js / OpenSSL (Local et Render)
   if (creds && creds.private_key) {
     creds.private_key = creds.private_key
       .replace(/\\n/g, '\n')
@@ -73,12 +66,8 @@ const creerClasseCarte = async () => {
       issuerName: 'E-Wallet',
       programName: 'Carte de Fidélité',
       programLogo: {
-        sourceUri: {
-          uri: 'https://i.imgur.com/8Q73v2E.png',
-        },
-        contentDescription: {
-          defaultValue: { language: 'fr', value: 'Logo' },
-        },
+        sourceUri: { uri: 'https://i.imgur.com/8Q73v2E.png' },
+        contentDescription: { defaultValue: { language: 'fr', value: 'Logo' } },
       },
       hexBackgroundColor: '#EAB308',
       reviewStatus: 'UNDER_REVIEW',
