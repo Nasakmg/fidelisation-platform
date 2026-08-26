@@ -77,7 +77,7 @@ const genererLienWallet = async (client) => {
   }
 
   // Identifiants uniques pour l'objet et la classe
-  const classId = `${issuerId}.carte_fidelite_class`;
+  const classId = `${issuerId}.fidelisation_card`;
   const objectId = `${issuerId}.${client.id}_${Date.now()}`;
 
   // Structure du Payload exigée par Google Pay API
@@ -114,6 +114,32 @@ const genererLienWallet = async (client) => {
   // URL finale vers Google Pay
   return `https://pay.google.com/gp/v/save/${token}`;
 };
+
+
+// Fonction pour créer/s'assurer que la classe existe
+const assurerExistenceClasse = async (walletClient, issuerId, classId) => {
+  try {
+    await walletClient.genericclass.get({ resourceId: classId });
+  } catch (err) {
+    if (err.status === 404) {
+      // La classe n'existe pas, on la crée
+      await walletClient.genericclass.insert({
+        requestBody: {
+          id: classId,
+          classTemplateInfo: {
+            cardTemplateInfo: {
+              cardTitle: {
+                defaultValue: { language: 'fr-FR', value: 'Carte de Fidélité' }
+              }
+            }
+          }
+        }
+      });
+      console.log('✅ Classe Google Wallet créée automatiquement');
+    }
+  }
+};
+
 
 // 4. EXPORTS : Exportation de toutes les fonctions
 module.exports = {
