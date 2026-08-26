@@ -76,28 +76,24 @@ const genererLienWallet = async (client) => {
     throw new Error('Identifiants Google Wallet invalides ou manquants.');
   }
 
-  // Identifiants uniques pour l'objet et la classe
+  // ID de la classe exacte présente sur votre console
   const classId = `${issuerId}.fidelisation_card`;
   const objectId = `${issuerId}.${client.id}_${Date.now()}`;
 
-  // Structure du Payload exigée par Google Pay API
   const claims = {
     iss: creds.client_email,
     aud: 'google',
     origins: [process.env.FRONTEND_URL || 'https://fidelisation-platform.vercel.app'],
     typ: 'savetowallet',
     payload: {
-      genericObjects: [
+      // ⚠️ Utiliser loyaltyObjects et non genericObjects pour une carte de fidélité
+      loyaltyObjects: [
         {
           id: objectId,
           classId: classId,
           state: 'ACTIVE',
-          header: {
-            defaultValue: {
-              language: 'fr-FR',
-              value: `${client.prenom || ''} ${client.nom || ''}`.trim() || 'Client',
-            },
-          },
+          accountName: `${client.prenom || ''} ${client.nom || ''}`.trim() || 'Client',
+          accountId: client.qr_code || String(client.id),
           barcode: {
             type: 'QR_CODE',
             value: client.qr_code || String(client.id),
@@ -108,13 +104,9 @@ const genererLienWallet = async (client) => {
     },
   };
 
-  // Signature du jeton JWT avec la clé privée
   const token = jwt.sign(claims, creds.private_key, { algorithm: 'RS256' });
-
-  // URL finale vers Google Pay
   return `https://pay.google.com/gp/v/save/${token}`;
 };
-
 
 // Fonction pour créer/s'assurer que la classe existe
 const assurerExistenceClasse = async (walletClient, issuerId, classId) => {
