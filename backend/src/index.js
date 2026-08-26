@@ -9,36 +9,39 @@ const transactionRoutes = require('./routes/transactionRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
 const campagneRoutes = require('./routes/campagneRoutes');
 const adminRoutes = require('./routes/adminRoutes');
-const { creerClasseCarte } = require('./config/googleWallet');
 const abonnementRoutes = require('./routes/abonnementRoutes');
+const { creerClasseCarte } = require('./config/googleWallet');
 const { initAdmin } = require('./config/firebaseAdmin');
-
-
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Middleware - ordre important !
+// Middlewares
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Routes
+// Declaration des routes API
 app.use('/api/clients', clientRoutes);
 app.use('/api/entreprises', entrepriseRoutes);
 app.use('/api/transactions', transactionRoutes);
+app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/campagnes', campagneRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/abonnements', abonnementRoutes);
 
 // Route de test
 app.get('/', (req, res) => {
   res.json({ message: '🚀 API Fidélisation opérationnelle !' });
 });
 
+// Endpoints de Debug
 app.get('/api/debug/db', async (req, res) => {
   try {
-    const pool = require('./config/db');
     const result = await pool.query('SELECT 1 as ok');
     const tableInfo = await pool.query(
-      `SELECT to_regclass('public.fcm_tokens') as fcm_tokens_table`);
+      `SELECT to_regclass('public.fcm_tokens') as fcm_tokens_table`
+    );
     res.json({
       message: '✅ DB accessible',
       db_ok: result.rows[0].ok,
@@ -100,15 +103,17 @@ app.get('/api/debug/fcm-tokens', async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
+// Démarrage du serveur et initialisation sécurisée des services
+app.listen(PORT, async () => {
   console.log(`✅ Serveur démarré sur le port ${PORT}`);
+
+  try {
+    if (typeof creerClasseCarte === 'function') {
+      await creerClasseCarte();
+    } else {
+      console.warn("⚠️ creerClasseCarte n'est pas une fonction dans googleWallet.js");
+    }
+  } catch (error) {
+    console.error("ℹ️ Google Wallet init:", error.message);
+  }
 });
-app.use('/api/dashboard', dashboardRoutes);
-
-app.use('/api/campagnes', campagneRoutes);
-
-app.use('/api/admin', adminRoutes);
-
-app.use('/api/abonnements', abonnementRoutes);
-
-creerClasseCarte();
