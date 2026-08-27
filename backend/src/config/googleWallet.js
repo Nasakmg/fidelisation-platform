@@ -71,6 +71,27 @@ const genererLienWallet = async (client) => {
     throw new Error('Identifiants Google Wallet invalides ou manquants.');
   }
 
+  // Tenter de créer/vérifier la classe en arrière-plan
+  try {
+    const clientWallet = await creerClasseCarte();
+    if (clientWallet) {
+      await clientWallet.loyaltyclass.insert({
+        requestBody: {
+          id: CLASS_ID,
+          issuerName: 'E-Wallet',
+          programName: 'Programme de Fidélité',
+          programLogo: {
+            sourceUri: { uri: 'https://images.unsplash.com/photo-1556742049-0a67e512d4d1?w=500' },
+            contentDescription: { defaultValue: { language: 'fr-FR', value: 'Logo Fidelite' } },
+          },
+          reviewStatus: 'UNDER_REVIEW',
+        },
+      }).catch(() => {}); // Si elle existe déjà, l'erreur 409 est ignorée
+    }
+  } catch (err) {
+    console.log("ℹ️ Vérification classe ignorée:", err.message);
+  }
+
   const cleanCode = String(client.qr_code || client.id).replace(/[^a-zA-Z0-9_-]/g, '');
   const objectId = `${ISSUER_ID}.USR_${cleanCode}_${Date.now()}`;
 
