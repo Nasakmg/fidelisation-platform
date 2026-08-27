@@ -4,41 +4,45 @@ const { google } = require('googleapis');
 const jwt = require('jsonwebtoken');
 
 const ISSUER_ID = process.env.GOOGLE_WALLET_ISSUER_ID || '3388000000023148271';
-// Alignement exact sur la classe active de la console
 const CLASS_ID = `${ISSUER_ID}.fidelisation_card`;
 
 const getCredentials = () => {
   let creds = null;
 
-  if (process.env.GOOGLE_SERVICE_ACCOUNT_BASE64) {
+  // 1. Tenter depuis le fichier JSON local si présent
+  const localJsonPath = path.join(__dirname, 'fidelitewalletperso-789d16de0a70.json');
+  if (fs.existsSync(localJsonPath)) {
     try {
-      const base64Str = process.env.GOOGLE_SERVICE_ACCOUNT_BASE64.trim();
-      const decoded = Buffer.from(base64Str, 'base64').toString('utf8');
-      creds = JSON.parse(decoded);
+      creds = JSON.parse(fs.readFileSync(localJsonPath, 'utf8'));
     } catch (err) {
-      console.error('❌ Erreur décodage Base64:', err.message);
+      console.error('❌ Erreur lecture fichier JSON local:', err.message);
     }
   }
 
-  if (!creds) {
-    const localJsonPath = path.join(__dirname, 'fidelitewalletperso-789d16de0a70.json');
-    if (fs.existsSync(localJsonPath)) {
-      try {
-        creds = JSON.parse(fs.readFileSync(localJsonPath, 'utf8'));
-      } catch (err) {
-        console.error('❌ Erreur lecture fichier local:', err.message);
-      }
-    }
+  // 2. Extraire la clé privée depuis l'environnement Render s'il y a lieu
+  let rawPrivateKey = process.env.GOOGLE_PRIVATE_KEY;
+  
+  if (!rawPrivateKey && creds) {
+    rawPrivateKey = creds.private_key;
   }
 
-  if (!creds) return null;
-
-  let rawKey = process.env.GOOGLE_PRIVATE_KEY || creds.private_key;
-  if (rawKey) {
-    creds.private_key = rawKey.replace(/\\n/g, '\n').trim();
+  if (!rawPrivateKey) {
+    console.error('❌ Aucune clé privée Google Wallet trouvée !');
+    return null;
   }
 
-  return creds;
+  // Normalisation critique des saut de lignes \n
+  const formattedPrivateKey = rawPrivateKey
+    .replace(/\\n/g, '\n')
+    .replace(/"/g, '')
+    .trim();
+
+  const clientEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || (creds ? creds.client_email : 'walletperso@fidelitewalletperso.iam.gserviceaccount.com');
+
+  return {
+    client_email: clientEmail,
+    private_key: formattedPrivateKey,
+  };
 };
 
 const creerClasseCarte = async () => {
@@ -56,7 +60,7 @@ const creerClasseCarte = async () => {
     console.log("✅ Client Google Wallet prêt");
     return google.walletobjects({ version: 'v1', auth });
   } catch (error) {
-    console.error("❌ Erreur Google Wallet:", error.message);
+    console.error("❌ Erreur Google Wallet init:", error.message);
     return null;
   }
 };
@@ -67,14 +71,16 @@ const genererLienWallet = async (client) => {
     throw new Error('Identifiants Google Wallet invalides ou manquants.');
   }
 
-  // Nettoyage de l'ID objet (caractères alphanumériques uniquement)
   const cleanCode = String(client.qr_code || client.id).replace(/[^a-zA-Z0-9_-]/g, '');
   const objectId = `${ISSUER_ID}.USR_${cleanCode}_${Date.now()}`;
 
   const claims = {
     iss: creds.client_email,
     aud: 'google',
-    origins: [process.env.FRONTEND_URL || 'https://fidelisation-platform.vercel.app'],
+    origins: [
+      'https://fidelisation-platform.vercel.app',
+      'http://localhost:3000'
+    ],
     typ: 'savetowallet',
     payload: {
       loyaltyObjects: [
@@ -93,8 +99,8 @@ const genererLienWallet = async (client) => {
           },
           loyaltyPoints: {
             label: 'Points',
-            balance: { string: String(client.points_total || 0) },
-          },
+            balance: { string: String(client.points_total || 0) }
+          }
         },
       ],
     },
