@@ -1,63 +1,62 @@
 const path = require('path');
 const fs = require('fs');
-const { google } = require('googleapis');
 const jwt = require('jsonwebtoken');
+const { google } = require('googleapis');
 
 const ISSUER_ID = process.env.GOOGLE_WALLET_ISSUER_ID || '3388000000023148271';
 const CLASS_ID = `${ISSUER_ID}.fidelisation_card`;
 
 const getCredentials = () => {
-  let creds = null;
+  // 1. Variable d'environnement sur Render / Vercel (Production)
+  if (process.env.GOOGLE_PRIVATE_KEY && process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL) {
+    return {
+      client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
+      private_key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n').replace(/"/g, '').trim()
+    };
+  }
 
-  const localJsonPath = path.join(__dirname, 'fidelitewalletperso-789d16de0a70.json');
+  // 2. Fichier JSON local (Développement)
+  const localJsonPath = path.join(__dirname, 'fidelitewalletperso-e69dfc8f4c8a.json');
   if (fs.existsSync(localJsonPath)) {
     try {
-      creds = JSON.parse(fs.readFileSync(localJsonPath, 'utf8'));
+      const creds = JSON.parse(fs.readFileSync(localJsonPath, 'utf8'));
+      return {
+        client_email: creds.client_email,
+        private_key: creds.private_key.replace(/\\n/g, '\n').replace(/"/g, '').trim()
+      };
     } catch (err) {
-      console.error('❌ Erreur lecture fichier JSON local:', err.message);
+      console.error('❌ Erreur lecture JSON local:', err.message);
     }
   }
 
-  let rawPrivateKey = process.env.GOOGLE_PRIVATE_KEY || (creds ? creds.private_key : null);
-
-  if (!rawPrivateKey) {
-    console.error('❌ Aucune clé privée Google Wallet trouvée !');
-    return null;
-  }
-
-  const formattedPrivateKey = rawPrivateKey
-    .replace(/\\n/g, '\n')
-    .replace(/"/g, '')
-    .trim();
-
-  const clientEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || (creds ? creds.client_email : 'walletperso@fidelitewalletperso.iam.gserviceaccount.com');
-
-  return {
-    client_email: clientEmail,
-    private_key: formattedPrivateKey,
-  };
+  return null;
 };
 
+// Fonction d'initialisation du client Google API pour créer les classes
 const creerClasseCarte = async () => {
   const creds = getCredentials();
   if (!creds) {
-    console.log("⚠️ Identifiants Google Wallet introuvables");
+    console.error('❌ Identifiants Google Wallet indisponibles pour creerClasseCarte');
     return null;
   }
 
   try {
     const auth = new google.auth.GoogleAuth({
-      credentials: creds,
+      credentials: {
+        client_email: creds.client_email,
+        private_key: creds.private_key,
+      },
       scopes: ['https://www.googleapis.com/auth/wallet_object.issuer'],
     });
-    console.log("✅ Client Google Wallet prêt");
+
     return google.walletobjects({ version: 'v1', auth });
-  } catch (error) {
-    console.error("❌ Erreur Google Wallet init:", error.message);
+  } catch (err) {
+    console.error('❌ Erreur authentification Google Wallet:', err.message);
     return null;
   }
 };
 
+// Génération du lien JWT pour l'ajout de la carte par les clients
 const genererLienWallet = async (client) => {
   const creds = getCredentials();
   if (!creds || !creds.client_email || !creds.private_key) {
@@ -84,7 +83,7 @@ const genererLienWallet = async (client) => {
           programName: 'Programme de Fidélité',
           issuerName: 'E-Wallet',
           accountName: `${client.prenom || ''} ${client.nom || ''}`.trim() || 'Client',
-          accountId: String(client.id),
+          accountId: String(client.id || cleanCode),
           barcode: {
             type: 'QR_CODE',
             value: String(client.qr_code || client.id),
