@@ -42,13 +42,17 @@ const getCredentials = () => {
 
 const creerClasseCarte = async () => {
   const creds = getCredentials();
-  if (!creds) return null;
+  if (!creds) {
+    console.log("⚠️ Identifiants Google Wallet introuvables");
+    return null;
+  }
 
   try {
     const auth = new google.auth.GoogleAuth({
       credentials: creds,
       scopes: ['https://www.googleapis.com/auth/wallet_object.issuer'],
     });
+    console.log("✅ Client Google Wallet prêt");
     return google.walletobjects({ version: 'v1', auth });
   } catch (error) {
     console.error("❌ Erreur Google Wallet:", error.message);
@@ -62,7 +66,6 @@ const genererLienWallet = async (client) => {
     throw new Error('Identifiants Google Wallet invalides ou manquants.');
   }
 
-  // ID unique sans caractères spéciaux
   const cleanCode = String(client.qr_code || client.id).replace(/[^a-zA-Z0-9_-]/g, '');
   const objectId = `${ISSUER_ID}.USR_${cleanCode}_${Date.now()}`;
 
