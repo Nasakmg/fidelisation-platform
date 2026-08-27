@@ -4,7 +4,6 @@ const { google } = require('googleapis');
 const jwt = require('jsonwebtoken');
 
 const ISSUER_ID = process.env.GOOGLE_WALLET_ISSUER_ID || '3388000000023148271';
-// Utilisation du nom EXACT de la classe sur la console Google Wallet
 const CLASS_ID = `${ISSUER_ID}.fidelisation_card`;
 
 const getCredentials = () => {
@@ -63,15 +62,14 @@ const genererLienWallet = async (client) => {
     throw new Error('Identifiants Google Wallet invalides ou manquants.');
   }
 
-  // Nettoyage de l'ID objet (caractères alphanumériques uniquement)
-  const cleanId = String(client.qr_code || client.id).replace(/[^a-zA-Z0-9_-]/g, '');
-  const objectId = `${ISSUER_ID}.USR_${cleanId}_${Date.now()}`;
+  // ID unique sans caractères spéciaux
+  const cleanCode = String(client.qr_code || client.id).replace(/[^a-zA-Z0-9_-]/g, '');
+  const objectId = `${ISSUER_ID}.USR_${cleanCode}_${Date.now()}`;
 
   const claims = {
     iss: creds.client_email,
     aud: 'google',
-    // Origine exacte sans slash final
-    origins: [process.env.FRONTEND_URL || 'https://fidelisation-platform.vercel.app'],
+    origins: ['https://fidelisation-platform.vercel.app'],
     typ: 'savetowallet',
     payload: {
       loyaltyObjects: [
@@ -88,10 +86,6 @@ const genererLienWallet = async (client) => {
             value: String(client.qr_code || client.id),
             alternateText: String(client.qr_code || client.id),
           },
-          loyaltyPoints: {
-            label: 'Points',
-            balance: { string: String(client.points_total || 0) }
-          }
         },
       ],
     },
