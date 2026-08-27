@@ -3,11 +3,13 @@ const fs = require('fs');
 const { google } = require('googleapis');
 const jwt = require('jsonwebtoken');
 
+const ISSUER_ID = process.env.GOOGLE_WALLET_ISSUER_ID || '3388000000023148271';
+const CLASS_ID = `${ISSUER_ID}.fidelisation_card`;
+
 // 1. Récupération des identifiants
 const getCredentials = () => {
   let creds = null;
 
-  // Production (Render via variable Base64)
   if (process.env.GOOGLE_SERVICE_ACCOUNT_BASE64) {
     try {
       const base64Str = process.env.GOOGLE_SERVICE_ACCOUNT_BASE64.trim();
@@ -18,7 +20,6 @@ const getCredentials = () => {
     }
   }
 
-  // Développement (Local)
   if (!creds) {
     const localJsonPath = path.join(__dirname, 'fidelitewalletperso-789d16de0a70.json');
     if (fs.existsSync(localJsonPath)) {
@@ -30,12 +31,8 @@ const getCredentials = () => {
     }
   }
 
-  if (!creds) {
-    console.warn('⚠️ Aucun identifiant Google Service Account valide trouvé.');
-    return null;
-  }
+  if (!creds) return null;
 
-  // Correction du format de la clé privée PEM
   let rawKey = process.env.GOOGLE_PRIVATE_KEY || creds.private_key;
   if (rawKey) {
     creds.private_key = rawKey.replace(/\\n/g, '\n').trim();
@@ -44,40 +41,34 @@ const getCredentials = () => {
   return creds;
 };
 
-// 2. Initialisation du client Google Wallet
+// 2. Initialisation Google Wallet
 const creerClasseCarte = async () => {
   const creds = getCredentials();
-  if (!creds) {
-    console.error("❌ Impossible d'initialiser Google Wallet : Identifiants introuvables.");
-    return null;
-  }
+  if (!creds) return null;
 
   try {
     const auth = new google.auth.GoogleAuth({
       credentials: creds,
       scopes: ['https://www.googleapis.com/auth/wallet_object.issuer'],
     });
-
-    const walletClient = google.walletobjects({ version: 'v1', auth });
     console.log("✅ Client Google Wallet prêt");
-    return walletClient;
+    return google.walletobjects({ version: 'v1', auth });
   } catch (error) {
-    console.error("❌ Erreur lors de l'initialisation de Google Wallet :", error.message);
+    console.error("❌ Erreur Google Wallet:", error.message);
     return null;
   }
 };
 
-// 3. Génération du lien d'ajout à Google Wallet (JWT)
+// 3. Génération du Lien Wallet (JWT Complet)
 const genererLienWallet = async (client) => {
   const creds = getCredentials();
-  const issuerId = process.env.GOOGLE_WALLET_ISSUER_ID || '3388000000023148271';
-
   if (!creds || !creds.client_email || !creds.private_key) {
     throw new Error('Identifiants Google Wallet invalides ou manquants.');
   }
 
-  const classId = `${issuerId}.fidelisation_card`;
-  const objectId = `${issuerId}.${client.id}_${Date.now()}`;
+  // Identifiant unique de la carte client
+  const cleanQrCode = (client.qr_code || String(client.id)).replace(/[^a-zA-Z0-9]/g, '');
+  const objectId = `${ISSUER_ID}.USR_${cleanQrCode}_${client.id}`;
 
   const claims = {
     iss: creds.client_email,
@@ -88,7 +79,7 @@ const genererLienWallet = async (client) => {
       loyaltyObjects: [
         {
           id: objectId,
-          classId: classId,
+          classId: CLASS_ID,
           state: 'ACTIVE',
           programName: 'Programme de Fidélité',
           issuerName: 'E-Wallet',
@@ -99,6 +90,10 @@ const genererLienWallet = async (client) => {
             value: client.qr_code || String(client.id),
             alternateText: client.qr_code || String(client.id),
           },
+          loyaltyPoints: {
+            balance: { int: parseInt(client.points_total) || 0 },
+            label: 'Points'
+          }
         },
       ],
     },
@@ -108,32 +103,6 @@ const genererLienWallet = async (client) => {
   return `https://pay.google.com/gp/v/save/${token}`;
 };
 
-// Fonction pour créer/s'assurer que la classe existe
-const assurerExistenceClasse = async (walletClient, issuerId, classId) => {
-  try {
-    await walletClient.genericclass.get({ resourceId: classId });
-  } catch (err) {
-    if (err.status === 404) {
-      // La classe n'existe pas, on la crée
-      await walletClient.genericclass.insert({
-        requestBody: {
-          id: classId,
-          classTemplateInfo: {
-            cardTemplateInfo: {
-              cardTitle: {
-                defaultValue: { language: 'fr-FR', value: 'Carte de Fidélité' }
-              }
-            }
-          }
-        }
-      });
-      console.log('✅ Classe Google Wallet créée automatiquement');
-    }
-  }
-};
-
-
-// 4. EXPORTS : Exportation de toutes les fonctions
 module.exports = {
   getCredentials,
   creerClasseCarte,
