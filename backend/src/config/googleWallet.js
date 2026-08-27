@@ -64,32 +64,10 @@ const creerClasseCarte = async () => {
     return null;
   }
 };
-
 const genererLienWallet = async (client) => {
   const creds = getCredentials();
   if (!creds || !creds.client_email || !creds.private_key) {
     throw new Error('Identifiants Google Wallet invalides ou manquants.');
-  }
-
-  // Tenter de créer/vérifier la classe en arrière-plan
-  try {
-    const clientWallet = await creerClasseCarte();
-    if (clientWallet) {
-      await clientWallet.loyaltyclass.insert({
-        requestBody: {
-          id: CLASS_ID,
-          issuerName: 'E-Wallet',
-          programName: 'Programme de Fidélité',
-          programLogo: {
-            sourceUri: { uri: 'https://images.unsplash.com/photo-1556742049-0a67e512d4d1?w=500' },
-            contentDescription: { defaultValue: { language: 'fr-FR', value: 'Logo Fidelite' } },
-          },
-          reviewStatus: 'UNDER_REVIEW',
-        },
-      }).catch(() => {}); // Si elle existe déjà, l'erreur 409 est ignorée
-    }
-  } catch (err) {
-    console.log("ℹ️ Vérification classe ignorée:", err.message);
   }
 
   const cleanCode = String(client.qr_code || client.id).replace(/[^a-zA-Z0-9_-]/g, '');
@@ -98,16 +76,17 @@ const genererLienWallet = async (client) => {
   const claims = {
     iss: creds.client_email,
     aud: 'google',
+    // OBLIGATOIRE : Définir explicitement l'origine Vercel
     origins: [
-      'https://fidelisation-platform.vercel.app',
-      'http://localhost:3000'
+      'https://fidelisation-platform.vercel.app'
     ],
     typ: 'savetowallet',
     payload: {
       loyaltyObjects: [
         {
           id: objectId,
-          classId: CLASS_ID,
+          // OBLIGATOIRE : Pointeur exact vers la classe active
+          classId: `${ISSUER_ID}.fidelisation_card`,
           state: 'ACTIVE',
           programName: 'Programme de Fidélité',
           issuerName: 'E-Wallet',
@@ -130,7 +109,6 @@ const genererLienWallet = async (client) => {
   const token = jwt.sign(claims, creds.private_key, { algorithm: 'RS256' });
   return `https://pay.google.com/gp/v/save/${token}`;
 };
-
 module.exports = {
   getCredentials,
   creerClasseCarte,
