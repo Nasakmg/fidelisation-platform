@@ -2,7 +2,7 @@ const pool = require('../config/db');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
-const { getCredentials } = require('../config/googleWallet');
+const { genererLienWallet: genererLienWalletConfig } = require('../config/googleWallet');
 
 const inscrireClient = async (req, res) => {
   const { nom, prenom, email, telephone, mot_de_passe, date_naissance, entreprise_qr } = req.body;
@@ -136,7 +136,7 @@ const genererLienWallet = async (req, res) => {
     }
 
     const result = await pool.query(
-      'SELECT id, nom, prenom, email, qr_code, points_total FROM clients WHERE id = $1',
+      'SELECT id, nom, prenom, email, qr_code, points_total, created_at FROM clients WHERE id = $1',
       [clientId]
     );
 
@@ -145,48 +145,9 @@ const genererLienWallet = async (req, res) => {
     }
 
     const client = result.rows[0];
-    const creds = getCredentials();
 
-    if (!creds) {
-      return res.status(500).json({ message: '❌ Identifiants Google Service Account indisponibles' });
-    }
-
-    const issuerId = process.env.GOOGLE_WALLET_ISSUER_ID || '3388000000022802081';
-    const classId = `${issuerId}.carte_fidelite`;
-    const objectId = `${issuerId}.client_${client.id}`;
-
-    // Payload JWT pour l'API Google Wallet
-    const claims = {
-      iss: creds.client_email,
-      aud: 'google',
-      origins: [],
-      typ: 'savetowallet',
-      payload: {
-        loyaltyObjects: [
-          {
-            id: objectId,
-            classId: classId,
-            state: 'ACTIVE',
-            accountId: String(client.id),
-            accountName: `${client.prenom} ${client.nom}`,
-            barcode: {
-              type: 'QR_CODE',
-              value: client.qr_code || `USR-${client.id}`,
-            },
-            loyaltyPoints: {
-              label: 'Points',
-              balance: {
-                string: String(client.points_total || 0),
-              },
-            },
-          },
-        ],
-      },
-    };
-
-    // Signature du token JWT avec la cle privee du Service Account
-    const token = jwt.sign(claims, creds.private_key, { algorithm: 'RS256' });
-    const saveUrl = `https://pay.google.com/gp/v/save/${token}`;
+    // Délégation de la génération à googleWallet.js (qui utilise fidelisation_card et le bon ISSUER_ID)
+    const saveUrl = await genererLienWalletConfig(client);
 
     return res.json({
       message: '✅ Lien Google Wallet généré avec succès !',
