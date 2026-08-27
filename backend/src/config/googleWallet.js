@@ -4,8 +4,7 @@ const jwt = require('jsonwebtoken');
 const { google } = require('googleapis');
 
 const ISSUER_ID = process.env.GOOGLE_WALLET_ISSUER_ID || '3388000000023148271';
-const CLASS_ID = `${ISSUER_ID}.carte_fidelite`;
-
+const CLASS_ID = `${ISSUER_ID}.fidelisation_card`;
 const getCredentials = () => {
   // 1. Variable d'environnement sur Render / Vercel (Production)
   if (process.env.GOOGLE_PRIVATE_KEY && process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL) {
