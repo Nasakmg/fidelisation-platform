@@ -9,7 +9,6 @@ const CLASS_ID = `${ISSUER_ID}.fidelisation_card`;
 const getCredentials = () => {
   let creds = null;
 
-  // 1. Tenter depuis le fichier JSON local si présent
   const localJsonPath = path.join(__dirname, 'fidelitewalletperso-789d16de0a70.json');
   if (fs.existsSync(localJsonPath)) {
     try {
@@ -19,19 +18,13 @@ const getCredentials = () => {
     }
   }
 
-  // 2. Extraire la clé privée depuis l'environnement Render s'il y a lieu
-  let rawPrivateKey = process.env.GOOGLE_PRIVATE_KEY;
-  
-  if (!rawPrivateKey && creds) {
-    rawPrivateKey = creds.private_key;
-  }
+  let rawPrivateKey = process.env.GOOGLE_PRIVATE_KEY || (creds ? creds.private_key : null);
 
   if (!rawPrivateKey) {
     console.error('❌ Aucune clé privée Google Wallet trouvée !');
     return null;
   }
 
-  // Normalisation critique des saut de lignes \n
   const formattedPrivateKey = rawPrivateKey
     .replace(/\\n/g, '\n')
     .replace(/"/g, '')
@@ -64,6 +57,7 @@ const creerClasseCarte = async () => {
     return null;
   }
 };
+
 const genererLienWallet = async (client) => {
   const creds = getCredentials();
   if (!creds || !creds.client_email || !creds.private_key) {
@@ -76,17 +70,16 @@ const genererLienWallet = async (client) => {
   const claims = {
     iss: creds.client_email,
     aud: 'google',
-    // OBLIGATOIRE : Définir explicitement l'origine Vercel
     origins: [
-      'https://fidelisation-platform.vercel.app'
+      'https://fidelisation-platform.vercel.app',
+      'http://localhost:3000'
     ],
     typ: 'savetowallet',
     payload: {
       loyaltyObjects: [
         {
           id: objectId,
-          // OBLIGATOIRE : Pointeur exact vers la classe active
-          classId: `${ISSUER_ID}.fidelisation_card`,
+          classId: CLASS_ID,
           state: 'ACTIVE',
           programName: 'Programme de Fidélité',
           issuerName: 'E-Wallet',
@@ -109,6 +102,7 @@ const genererLienWallet = async (client) => {
   const token = jwt.sign(claims, creds.private_key, { algorithm: 'RS256' });
   return `https://pay.google.com/gp/v/save/${token}`;
 };
+
 module.exports = {
   getCredentials,
   creerClasseCarte,
