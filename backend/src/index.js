@@ -35,6 +35,52 @@ app.get('/', (req, res) => {
   res.json({ message: '🚀 API Fidélisation opérationnelle !' });
 });
 
+// Endpoint pour forcer la création/vérification de la classe Google Wallet
+app.get('/api/init-wallet-class', async (req, res) => {
+  try {
+    const clientWallet = await creerClasseCarte();
+    if (!clientWallet) {
+      return res.status(500).json({ error: "Impossible d'initialiser le client Google Wallet" });
+    }
+
+    const ISSUER_ID = process.env.GOOGLE_WALLET_ISSUER_ID || '3388000000023148271';
+    const classId = `${ISSUER_ID}.fidelisation_card`;
+
+    // 1. Vérifier si la classe existe déjà
+    try {
+      const existingClass = await clientWallet.loyaltyclass.get({ resourceId: classId });
+      return res.json({ message: "✅ La classe existe déjà sur Google Wallet !", details: existingClass.data });
+    } catch (err) {
+      if (err.status !== 404 && err.code !== 404) {
+        throw err;
+      }
+    }
+
+    // 2. Créer la classe si elle n'existe pas
+    const response = await clientWallet.loyaltyclass.insert({
+      requestBody: {
+        id: classId,
+        issuerName: 'E-Wallet',
+        programName: 'Programme de Fidélité',
+        programLogo: {
+          sourceUri: {
+            uri: 'https://images.unsplash.com/photo-1556742049-0a67e512d4d1?w=500',
+          },
+          contentDescription: {
+            defaultValue: { language: 'fr-FR', value: 'Logo Fidelite' },
+          },
+        },
+        reviewStatus: 'UNDER_REVIEW',
+      },
+    });
+
+    return res.json({ message: "🎉 Classe Google Wallet créée avec succès !", data: response.data });
+  } catch (error) {
+    console.error("❌ Erreur init wallet class:", error);
+    return res.status(500).json({ error: error.message, details: error.response?.data || null });
+  }
+});
+
 // Endpoints de Debug
 app.get('/api/debug/db', async (req, res) => {
   try {
