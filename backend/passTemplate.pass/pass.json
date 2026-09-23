@@ -1,0 +1,35 @@
+{
+  "formatVersion": 1,
+  "passTypeIdentifier": "pass.wallete",
+  "teamIdentifier": "YWT9GX4U4V",
+  "organizationName": "EWallet",
+  "serialNumber": "12345678",
+  "description": "Carte de Fidélité EWallet",
+  "logoText": "EWallet",
+  "foregroundColor": "rgb(255, 255, 255)",
+  "backgroundColor": "rgb(30, 41, 59)",
+  "labelColor": "rgb(148, 163, 184)",
+  "storeCard": {
+    "primaryFields": [
+      {
+        "key": "balance",
+        "label": "SOLDE POINTS",
+        "value": "250 pts"
+      }
+    ],
+    "secondaryFields": [
+      {
+        "key": "passenger-name",
+        "label": "TITULAIRE",
+        "value": "Kalidou Gaye"
+      }
+    ]
+  },
+  "barcodes": [
+    {
+      "format": "PKBarcodeFormatQR",
+      "message": "CLIENT-123456",
+      "messageEncoding": "iso-8859-1"
+    }
+  ]
+}

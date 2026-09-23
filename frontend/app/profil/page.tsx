@@ -17,6 +17,7 @@ export default function ProfilPage() {
   const router = useRouter();
   const [client, setClient] = useState<any>(null);
   const [walletLoading, setWalletLoading] = useState(false);
+  const [appleWalletLoading, setAppleWalletLoading] = useState(false);
   const [chargement, setChargement] = useState(true);
 
   const fetchProfil = useCallback(async () => {
@@ -34,9 +35,9 @@ export default function ProfilPage() {
   }, [clientToken]);
 
   useEffect(() => {
-    if (!clientToken) { 
-      router.push('/client'); 
-      return; 
+    if (!clientToken) {
+      router.push('/client');
+      return;
     }
 
     fetchProfil();
@@ -65,29 +66,61 @@ export default function ProfilPage() {
   }, [clientToken, router, fetchProfil]);
 
   const handleGoogleWallet = async () => {
-  setWalletLoading(true);
-  try {
-    // 1. Requête POST pour correspondre à la route backend
-    const response = await axios.post(
-      `${process.env.NEXT_PUBLIC_API_URL}/api/clients/wallet`,
-      {},
-      { headers: { Authorization: `Bearer ${clientToken}` } }
-    );
+    setWalletLoading(true);
+    try {
+      // 1. Requête POST pour correspondre à la route backend
+      const response = await axios.post(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/clients/wallet`,
+        {},
+        { headers: { Authorization: `Bearer ${clientToken}` } }
+      );
 
-    // 2. Récupération de l'URL du lien wallet (saveUrl ou url)
-    const walletUrl = response.data?.saveUrl || response.data?.url;
+      // 2. Récupération de l'URL du lien wallet (saveUrl ou url)
+      const walletUrl = response.data?.saveUrl || response.data?.url;
 
-    if (walletUrl) {
-      window.location.href = walletUrl; // Redirection directe vers Google Wallet
-    } else {
-      console.error('❌ Lien Google Wallet introuvable dans la réponse.');
+      if (walletUrl) {
+        window.location.href = walletUrl; // Redirection directe vers Google Wallet
+      } else {
+        console.error('❌ Lien Google Wallet introuvable dans la réponse.');
+      }
+    } catch (err: any) {
+      console.error('❌ Erreur Google Wallet:', err?.response?.data || err.message);
+    } finally {
+      setWalletLoading(false);
     }
-  } catch (err: any) {
-    console.error('❌ Erreur Google Wallet:', err?.response?.data || err.message);
-  } finally {
-    setWalletLoading(false);
-  }
-};
+  };
+
+
+  const handleAppleWallet = async () => {
+    setAppleWalletLoading(true);
+    try {
+      const response = await axios.get(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/apple-wallet/generate`,
+        {
+          headers: { Authorization: `Bearer ${clientToken}` },
+          responseType: 'blob'
+        }
+      );
+
+      const blob = new Blob([response.data], { type: 'application/vnd.apple.pkpass' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `ewallet-${client?.qr_code || 'carte'}.pkpass`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch (err: any) {
+      console.error('❌ Erreur Apple Wallet:', err?.response?.data || err.message);
+      alert('La carte Apple Wallet n’a pas pu être générée. Vérifiez les certificats Apple du serveur.');
+    } finally {
+      setAppleWalletLoading(false);
+    }
+  };
+
+  // Détection iOS
+  const isIOS = typeof window !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent);
 
   const getBadge = (points: number = 0) => {
     if (points >= 500) return { label: 'VIP', icon: Crown, color: 'text-yellow-400', bg: 'bg-yellow-400/10 border-yellow-400/20' };
@@ -240,6 +273,23 @@ export default function ProfilPage() {
             </>
           )}
         </motion.button>
+        {/* Apple Wallet */}
+        <button
+          type="button"
+          onClick={handleAppleWallet}
+          disabled={appleWalletLoading}
+          className="w-full min-h-16 bg-white hover:bg-gray-200 border border-white text-black font-semibold py-4 px-4 rounded-2xl flex items-center justify-center gap-3 transition-all disabled:opacity-50"
+        >
+          {appleWalletLoading ? (
+            <div className="w-5 h-5 border-2 border-black/30 border-t-black rounded-full animate-spin" />
+          ) : (
+            <>
+              <Wallet size={20} className="text-black" />
+              <span>Ajouter à Apple Wallet</span>
+            </>
+          )}
+          <ChevronRight size={16} className="text-black/50 ml-auto" />
+        </button>
 
         {/* Infos */}
         <motion.div
@@ -256,8 +306,8 @@ export default function ProfilPage() {
             <span className="text-white text-sm font-medium">
               {client?.created_at
                 ? new Date(client.created_at).toLocaleDateString('fr-FR', {
-                    day: 'numeric', month: 'long', year: 'numeric'
-                  })
+                  day: 'numeric', month: 'long', year: 'numeric'
+                })
                 : '---'}
             </span>
           </div>

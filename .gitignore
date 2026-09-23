@@ -6,3 +6,9 @@ dist/
 # Ignorer uniquement la clé privée Firebase secrète
 src/config/fidelitewalletperso-789d16de0a70.json
 *.pembackend/src/config/fidelitewalletperso-789d16de0a70.json 
+
+# Apple Wallet signing credentials generated locally
+backend/certificates.p12
+backend/certificates.pem
+backend/private-key.pem
+backend/private-key-encrypted.pem

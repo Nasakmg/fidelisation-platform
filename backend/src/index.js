@@ -1,5 +1,9 @@
 const express = require('express');
 const cors = require('cors');
+const { PKPass } = require('passkit-generator');
+const fs = require('fs');
+const path = require('path');
+const appleWalletRoutes = require('./routes/appleWalletRoutes');
 require('dotenv').config();
 
 const pool = require('./config/db');
@@ -12,6 +16,13 @@ const adminRoutes = require('./routes/adminRoutes');
 const abonnementRoutes = require('./routes/abonnementRoutes');
 const { creerClasseCarte } = require('./config/googleWallet');
 const { initAdmin } = require('./config/firebaseAdmin');
+
+// Charger les certificats situés à la racine de /backend (un dossier au-dessus de /src)
+const signerCert = fs.readFileSync(path.join(__dirname, '../certificates.p12'));
+const wwdr = fs.readFileSync(path.join(__dirname, '../WWDR.pem'));
+
+// Modèle .pass situé à la racine de /backend
+const passModelPath = path.join(__dirname, '../passTemplate.pass');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -29,6 +40,7 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/campagnes', campagneRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/abonnements', abonnementRoutes);
+app.use('/api/apple-wallet', appleWalletRoutes);
 
 // Route de test
 app.get('/', (req, res) => {
@@ -163,3 +175,5 @@ app.listen(PORT, async () => {
     console.error("ℹ️ Google Wallet init:", error.message);
   }
 });
+
+

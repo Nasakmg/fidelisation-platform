@@ -39,3 +39,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Clés d'accès Google Wallet et clés privées
+*.json
+!package.json
+!package-lock.json
+!tsconfig.json
