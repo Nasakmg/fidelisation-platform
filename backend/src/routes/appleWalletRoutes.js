@@ -81,7 +81,7 @@ router.get('/generate', verifyToken, async (req, res) => {
           ],
           secondaryFields: [
             {
-              key: 'name',
+              key: 'passenger-name',
               label: 'Titulaire',
               value: `${client.nom} ${client.prenom}`
             }
