@@ -152,7 +152,7 @@ app.get('/api/debug/fcm-tokens', async (req, res) => {
 });
 
 // Démarrage du serveur et initialisation sécurisée des services
-app.listen(PORT, async () => {
+app.listen(PORT, '0.0.0.0', async () => {
   console.log(`✅ Serveur démarré sur le port ${PORT}`);
 
   try {
