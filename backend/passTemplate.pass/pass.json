@@ -16,13 +16,6 @@
         "label": "SOLDE POINTS",
         "value": "250 pts"
       }
-    ],
-    "secondaryFields": [
-      {
-        "key": "passenger-name",
-        "label": "TITULAIRE",
-        "value": "Kalidou Gaye"
-      }
     ]
   },
   "barcodes": [
