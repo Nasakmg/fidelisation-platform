@@ -9,20 +9,5 @@
   "foregroundColor": "rgb(255, 255, 255)",
   "backgroundColor": "rgb(30, 41, 59)",
   "labelColor": "rgb(148, 163, 184)",
-  "storeCard": {
-    "primaryFields": [
-      {
-        "key": "balance",
-        "label": "SOLDE POINTS",
-        "value": "250 pts"
-      }
-    ]
-  },
-  "barcodes": [
-    {
-      "format": "PKBarcodeFormatQR",
-      "message": "CLIENT-123456",
-      "messageEncoding": "iso-8859-1"
-    }
-  ]
+  "storeCard": {}
 }

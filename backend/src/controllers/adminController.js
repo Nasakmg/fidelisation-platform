@@ -1,6 +1,7 @@
 const pool = require('../config/db');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const { envoyerNotificationPush } = require('../config/firebaseAdmin');
 
 // Connexion Admin
 const connecterAdmin = async (req, res) => {
@@ -242,7 +243,7 @@ const getCampagnesGlobales = async (req, res) => {
 
 // Envoyer notification globale à tous les clients
 const envoyerNotificationGlobale = async (req, res) => {
-  const { message, canal } = req.body;
+  const { message, canal, titre } = req.body;
   try {
     const clients = await pool.query('SELECT id FROM clients');
 
@@ -254,9 +255,26 @@ const envoyerNotificationGlobale = async (req, res) => {
       );
     }
 
+    let pushEnvoyes = 0;
+    let echecs = 0;
+    if (canal === 'push') {
+      const tokensResult = await pool.query(
+        'SELECT DISTINCT token FROM fcm_tokens WHERE token IS NOT NULL AND token <> \'\''
+      );
+      const result = await envoyerNotificationPush(
+        tokensResult.rows.map(row => row.token),
+        titre || 'Notification',
+        message,
+        'E-Wallet'
+      );
+      pushEnvoyes = result?.successCount || 0;
+      echecs = result?.failureCount || 0;
+    }
+
     res.json({
       message: `✅ Notification envoyée à ${clients.rows.length} client(s) !`,
-      nombre: clients.rows.length
+      nombre: clients.rows.length,
+      details: { push_envoyes: pushEnvoyes, echecs }
     });
   } catch (err) {
     res.status(500).json({ message: '❌ Erreur serveur', error: err.message });

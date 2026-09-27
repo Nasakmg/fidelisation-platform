@@ -73,9 +73,9 @@ router.get('/generate', verifyToken, async (req, res) => {
         storeCard: {
           primaryFields: [
             {
-              key: 'points',
+              key: 'balance',
               label: 'Points fidélité',
-              value: String(client.points_total),
+              value: `${client.points_total || 0} pts`,
               textAlignment: 'PKTextAlignmentCenter'
             }
           ],
