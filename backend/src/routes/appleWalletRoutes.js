@@ -68,46 +68,40 @@ router.get('/generate', verifyToken, async (req, res) => {
         certificates: getCertificates()
       },
       {
-        serialNumber: `EWALLET-${client.id}-${Date.now()}`,
-        // Champs dynamiques
-        storeCard: {
-          primaryFields: [
-            {
-              key: 'balance',
-              label: 'Points fidélité',
-              value: `${client.points_total || 0} pts`,
-              textAlignment: 'PKTextAlignmentCenter'
-            }
-          ],
-          secondaryFields: [
-            {
-              key: 'passenger-name',
-              label: 'Titulaire',
-              value: `${client.nom} ${client.prenom}`
-            }
-          ],
-          auxiliaryFields: [
-            {
-              key: 'member_since',
-              label: 'Membre depuis',
-              value: new Date(client.created_at).toLocaleDateString('fr-FR')
-            }
-          ],
-          backFields: [
-            {
-              key: 'qr_code',
-              label: 'Votre QR Code',
-              value: client.qr_code
-            }
-          ]
-        },
-        barcode: {
-          message: client.qr_code,
-          format: 'PKBarcodeFormatQR',
-          messageEncoding: 'iso-8859-1'
-        }
+        serialNumber: `EWALLET-${client.id}-${Date.now()}`
       }
     );
+
+    const templatePath = getTemplatePath();
+    pass.addBuffer('logo.png', fs.readFileSync(path.join(templatePath, 'icon.png')));
+    pass.addBuffer('logo@2x.png', fs.readFileSync(path.join(templatePath, 'icon@2x.png')));
+
+    pass.primaryFields.push({
+      key: 'balance',
+      label: 'Points fidélité',
+      value: `${client.points_total ?? 0} pts`,
+      textAlignment: 'PKTextAlignmentCenter'
+    });
+    pass.secondaryFields.push({
+      key: 'holder_name',
+      label: 'Titulaire',
+      value: `${client.prenom || ''} ${client.nom || ''}`.trim() || 'Client'
+    });
+    pass.auxiliaryFields.push({
+      key: 'member_since',
+      label: 'Membre depuis',
+      value: new Date(client.created_at || Date.now()).toLocaleDateString('fr-FR')
+    });
+    pass.backFields.push({
+      key: 'qr_code',
+      label: 'Votre QR Code',
+      value: String(client.qr_code || client.id)
+    });
+    pass.setBarcodes({
+      message: String(client.qr_code || client.id),
+      format: 'PKBarcodeFormatQR',
+      messageEncoding: 'iso-8859-1'
+    });
 
     const buffer = pass.getAsBuffer();
 
