@@ -1,5 +1,5 @@
 import { initializeApp, getApps } from 'firebase/app';
-import { getMessaging, getToken, onMessage, isSupported } from 'firebase/messaging';
+import { getMessaging, getToken, onMessage, isSupported, type MessagePayload, type Unsubscribe } from 'firebase/messaging';
 
 const firebaseConfig = {
   apiKey: "AIzaSyDVYHPVsqpZvy0pEpkzBT5rXKV52DEQJ60",
@@ -16,6 +16,17 @@ const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0
 
 export const requestNotificationPermission = async (): Promise<string | null> => {
   try {
+    if (!('Notification' in window)) return null;
+
+    const permission = Notification.permission === 'granted'
+      ? 'granted'
+      : await Notification.requestPermission();
+
+    if (permission !== 'granted') {
+      console.log('❌ Permission refusée');
+      return null;
+    }
+
     const supported = await isSupported();
     if (!supported) {
       console.log('ℹ️ Firebase Messaging non supporté');
@@ -30,14 +41,6 @@ export const requestNotificationPermission = async (): Promise<string | null> =>
       { scope: '/' }
     );
     console.log('✅ Service Worker enregistré');
-
-    const permission = await Notification.requestPermission();
-    console.log('🔔 Permission notifications:', permission);
-
-    if (permission !== 'granted') {
-      console.log('❌ Permission refusée');
-      return null;
-    }
 
     const token = await getToken(messaging, {
       vapidKey: VAPID_KEY,
@@ -56,14 +59,10 @@ export const requestNotificationPermission = async (): Promise<string | null> =>
   }
 };
 
-export const onMessageListener = () => {
-  return new Promise(async (resolve) => {
-    const supported = await isSupported().catch(() => false);
-    if (!supported) return;
-    const messaging = getMessaging(app);
-    onMessage(messaging, (payload) => {
-      console.log('📩 Message reçu au premier plan:', payload);
-      resolve(payload);
-    });
-  });
+export const listenForForegroundNotifications = async (
+  callback: (payload: MessagePayload) => void
+): Promise<Unsubscribe | null> => {
+  const supported = await isSupported().catch(() => false);
+  if (!supported) return null;
+  return onMessage(getMessaging(app), callback);
 };

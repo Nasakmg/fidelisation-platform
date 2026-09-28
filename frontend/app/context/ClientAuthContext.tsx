@@ -26,6 +26,42 @@ export const ClientAuthProvider = ({ children }: { children: React.ReactNode }) 
     if (savedClient) setClient(JSON.parse(savedClient));
   }, []);
 
+  useEffect(() => {
+    if (!clientToken) return;
+
+    let unsubscribe: (() => void) | undefined;
+    let cancelled = false;
+
+    const listen = async () => {
+      try {
+        const { listenForForegroundNotifications } = await import('../firebase');
+        const stopListening = await listenForForegroundNotifications((payload) => {
+          if (!('Notification' in window) || Notification.permission !== 'granted') return;
+          const title = payload.notification?.title || 'E-Wallet';
+          const options = {
+            body: payload.notification?.body || '',
+            icon: '/icon.svg',
+            data: payload.data || {}
+          };
+          void navigator.serviceWorker.ready
+            .then(registration => registration.showNotification(title, options))
+            .catch(err => console.error('Erreur notification au premier plan:', err));
+        });
+
+        if (cancelled) stopListening?.();
+        else if (stopListening) unsubscribe = stopListening;
+      } catch (err) {
+        console.error('Erreur écoute des notifications:', err);
+      }
+    };
+
+    void listen();
+    return () => {
+      cancelled = true;
+      unsubscribe?.();
+    };
+  }, [clientToken]);
+
   const clientLogin = (token: string, client: any) => {
     localStorage.setItem('client_token', token);
     localStorage.setItem('client_data', JSON.stringify(client));

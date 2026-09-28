@@ -62,7 +62,11 @@ export default function CampagnesPage() {
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      alert(response.data.message);
+      const details = response.data.details;
+      const recap = details && typeof details.appareils_cibles === 'number'
+        ? `\nPush livrés : ${details.push_envoyes}/${details.appareils_cibles} appareils.\nClients liés sans notifications activées : ${details.clients_sans_token}.`
+        : '';
+      alert(`${response.data.message}${recap}`);
       fetchCampagnes();
     } catch (err: any) {
       alert(err.response?.data?.message || '❌ Erreur');

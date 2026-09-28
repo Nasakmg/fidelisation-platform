@@ -59,6 +59,9 @@ const envoyerCampagne = async (req, res) => {
     let pushEnvoyes = 0;
     let smsEnvoyes = 0;
     let echecs = 0;
+    let appareilsCibles = 0;
+    let clientsCibles = 0;
+    let clientsSansToken = 0;
 
     // 3. Gestion selon le canal
     if (campagne.canal === 'email') {
@@ -104,7 +107,16 @@ const envoyerCampagne = async (req, res) => {
       }
 
    } else if (campagne.canal === 'push') {
-  // 1. Récupération de tous les tokens FCM des clients liés à l'entreprise (avec ou sans achat)
+  const linkedClientsResult = await pool.query(
+    `SELECT COUNT(DISTINCT ce.client_id) AS total
+     FROM client_entreprise ce
+     INNER JOIN clients c ON c.id = ce.client_id
+     WHERE ce.entreprise_id = $1`,
+    [entreprise_id]
+  );
+  clientsCibles = Number(linkedClientsResult.rows[0]?.total || 0);
+
+  // Push can only reach clients who registered at least one device token.
   const tokensResult = await pool.query(
     `SELECT DISTINCT ft.token, c.id as client_id, c.nom 
      FROM fcm_tokens ft
@@ -113,8 +125,11 @@ const envoyerCampagne = async (req, res) => {
      WHERE ce.entreprise_id = $1`,
     [entreprise_id]
   );
+  appareilsCibles = tokensResult.rows.length;
+  const clientsAvecToken = new Set(tokensResult.rows.map(row => row.client_id)).size;
+  clientsSansToken = Math.max(0, clientsCibles - clientsAvecToken);
 
-  console.log(`🔔 ${tokensResult.rows.length} token(s) FCM trouvé(s) pour l'entreprise ID: ${entreprise_id}`);
+  console.log(`🔔 ${appareilsCibles} appareil(s) FCM pour ${clientsCibles} client(s) liés; ${clientsSansToken} sans appareil inscrit (entreprise ${entreprise_id})`);
 
   // Cas où aucun client n'a encore activé les notifications Push
   if (tokensResult.rows.length === 0) {
@@ -125,7 +140,13 @@ const envoyerCampagne = async (req, res) => {
     return res.json({
       success: true,
       message: '⚠️ Aucun client n\'a encore activé les notifications Push pour votre entreprise.',
-      details: { push_envoyes: 0, echecs: 0 }
+      details: {
+        push_envoyes: 0,
+        echecs: 0,
+        appareils_cibles: 0,
+        clients_cibles: clientsCibles,
+        clients_sans_token: clientsCibles
+      }
     });
   }
 
@@ -167,7 +188,12 @@ const envoyerCampagne = async (req, res) => {
         emails_envoyes: emailsEnvoyes,
         sms_envoyes: smsEnvoyes,
         push_envoyes: pushEnvoyes,
-        echecs
+        echecs,
+        ...(campagne.canal === 'push' && {
+          appareils_cibles: appareilsCibles,
+          clients_cibles: clientsCibles,
+          clients_sans_token: clientsSansToken
+        })
       }
     });
 

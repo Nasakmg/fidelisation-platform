@@ -8,7 +8,7 @@ import { motion } from 'framer-motion';
 import { QRCodeSVG } from 'qrcode.react';
 
 import {
-  LogOut, Star, Crown, Wallet,
+  LogOut, Star, Crown, Wallet, Bell,
   History, ChevronRight, Sparkles
 } from 'lucide-react';
 
@@ -18,6 +18,8 @@ export default function ProfilPage() {
   const [client, setClient] = useState<any>(null);
   const [walletLoading, setWalletLoading] = useState(false);
   const [appleWalletLoading, setAppleWalletLoading] = useState(false);
+  const [pushLoading, setPushLoading] = useState(false);
+  const [pushMessage, setPushMessage] = useState('');
   const [chargement, setChargement] = useState(true);
 
   const fetchProfil = useCallback(async () => {
@@ -42,28 +44,44 @@ export default function ProfilPage() {
 
     fetchProfil();
 
-    if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
-      const setupPush = async () => {
-        try {
-          const { requestNotificationPermission } = await import('../firebase');
-          const fcmToken = await requestNotificationPermission();
-
-          if (fcmToken) {
-            await axios.post(
-              `${process.env.NEXT_PUBLIC_API_URL}/api/clients/fcm-token`,
-              { token: fcmToken },
-              { headers: { Authorization: `Bearer ${clientToken}` } }
-            );
-            console.log('✅ Token FCM enregistré sur le serveur');
-          }
-        } catch (err) {
-          console.error('❌ Erreur setup push:', err);
-        }
-      };
-
-      setupPush();
-    }
   }, [clientToken, router, fetchProfil]);
+
+  const handleEnableNotifications = async () => {
+    setPushLoading(true);
+    setPushMessage('');
+    try {
+      const isIOSDevice = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+        (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      const isInstalled = window.matchMedia('(display-mode: standalone)').matches ||
+        Boolean((navigator as Navigator & { standalone?: boolean }).standalone);
+
+      if (isIOSDevice && !isInstalled) {
+        setPushMessage('Sur iPhone/iPad : ouvrez ce site dans Safari, touchez Partager puis « Sur l’écran d’accueil ». Ouvrez ensuite E-Wallet depuis son icône et activez les notifications.');
+        return;
+      }
+
+      const { requestNotificationPermission } = await import('../firebase');
+      const fcmToken = await requestNotificationPermission();
+      if (!fcmToken) {
+        setPushMessage(Notification.permission === 'denied'
+          ? 'Les notifications sont bloquées dans les réglages du navigateur.'
+          : 'Ce navigateur ne peut pas activer les notifications push.');
+        return;
+      }
+
+      await axios.post(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/clients/fcm-token`,
+        { token: fcmToken },
+        { headers: { Authorization: `Bearer ${clientToken}` } }
+      );
+      setPushMessage('Notifications activées sur cet appareil.');
+    } catch (err) {
+      console.error('Erreur activation notifications:', err);
+      setPushMessage('Activation impossible pour le moment. Vérifiez la connexion et réessayez.');
+    } finally {
+      setPushLoading(false);
+    }
+  };
 
   const handleGoogleWallet = async () => {
     setWalletLoading(true);
@@ -290,6 +308,27 @@ export default function ProfilPage() {
           )}
           <ChevronRight size={16} className="text-black/50 ml-auto" />
         </button>
+
+        <section className="bg-[#0d0d0d] border border-white/[0.08] rounded-2xl p-4">
+          <div className="flex items-start gap-3">
+            <Bell size={18} className="mt-0.5 text-yellow-400" />
+            <div className="min-w-0 flex-1">
+              <h3 className="text-white font-semibold">Notifications de campagne</h3>
+              <p className="mt-1 text-xs text-gray-500">
+                Activez-les sur chaque appareil où vous souhaitez recevoir les offres.
+              </p>
+              <button
+                type="button"
+                onClick={handleEnableNotifications}
+                disabled={pushLoading}
+                className="mt-3 min-h-10 rounded-lg bg-yellow-400 px-4 text-sm font-semibold text-black disabled:opacity-50"
+              >
+                {pushLoading ? 'Activation…' : 'Activer les notifications'}
+              </button>
+              {pushMessage && <p role="status" className="mt-3 text-sm text-gray-300">{pushMessage}</p>}
+            </div>
+          </div>
+        </section>
 
         {/* Infos */}
         <motion.div
