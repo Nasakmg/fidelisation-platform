@@ -80,6 +80,8 @@ const envoyerCampagne = async (req, res) => {
     let echecs = 0;
     let appareilsCibles = 0;
     let clientsCibles = 0;
+    let clientsEmail = 0;
+    let clientsTelephone = 0;
     let clientsSansToken = 0;
 
     const clientsResult = await pool.query(
@@ -96,6 +98,7 @@ const envoyerCampagne = async (req, res) => {
       let tokens = [];
 
       if (canal === 'push') {
+        clientsTelephone++;
         const tokenResult = await pool.query(
           'SELECT DISTINCT token FROM fcm_tokens WHERE client_id = $1',
           [client.id]
@@ -107,8 +110,11 @@ const envoyerCampagne = async (req, res) => {
         }
         appareilsCibles += tokens.length;
       } else if (!client.email) {
+        clientsEmail++;
         echecs++;
         continue;
+      } else {
+        clientsEmail++;
       }
 
       const reservation = await pool.query(
@@ -173,6 +179,8 @@ const envoyerCampagne = async (req, res) => {
         echecs,
         appareils_cibles: appareilsCibles,
         clients_cibles: clientsCibles,
+        clients_email: clientsEmail,
+        clients_telephone: clientsTelephone,
         clients_sans_token: clientsSansToken
       }
     });

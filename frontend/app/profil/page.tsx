@@ -69,12 +69,12 @@ export default function ProfilPage() {
         return;
       }
 
-      await axios.post(
+      const tokenResponse = await axios.post(
         `${process.env.NEXT_PUBLIC_API_URL}/api/clients/fcm-token`,
         { token: fcmToken },
         { headers: { Authorization: `Bearer ${clientToken}` } }
       );
-      setPushMessage('Notifications activées sur cet appareil.');
+      setPushMessage(`Notifications activées. ${tokenResponse.data.nombre_tokens_client} appareil(s) enregistré(s).`);
     } catch (err) {
       console.error('Erreur activation notifications:', err);
       setPushMessage('Activation impossible pour le moment. Vérifiez la connexion et réessayez.');

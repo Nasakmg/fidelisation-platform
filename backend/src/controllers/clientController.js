@@ -4,6 +4,32 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const { genererLienWallet: genererLienWalletConfig } = require('../config/googleWallet');
 
+const lierClientABoutiqueParQr = async (clientId, entrepriseQr) => {
+  const qr = String(entrepriseQr || '').trim();
+  const match = /^ENT-(\d+)-(.+)$/i.exec(qr);
+  if (!match) return null;
+
+  const entrepriseId = Number(match[1]);
+  if (!Number.isSafeInteger(entrepriseId)) return null;
+
+  const entrepriseResult = await pool.query(
+    'SELECT id, nom FROM entreprises WHERE id = $1',
+    [entrepriseId]
+  );
+  const entreprise = entrepriseResult.rows[0];
+  if (!entreprise) return null;
+
+  const qrAttendu = `ENT-${entreprise.id}-${entreprise.nom.replace(/\s/g, '').toUpperCase()}`;
+  if (qr.toUpperCase() !== qrAttendu) return null;
+
+  await pool.query(
+    `INSERT INTO client_entreprise (client_id, entreprise_id)
+     VALUES ($1, $2) ON CONFLICT (client_id, entreprise_id) DO NOTHING`,
+    [clientId, entreprise.id]
+  );
+  return entreprise.id;
+};
+
 const inscrireClient = async (req, res) => {
   const { nom, prenom, email, telephone, mot_de_passe, date_naissance, entreprise_qr } = req.body;
   const emailNormalise = String(email || '').trim().toLowerCase();
@@ -36,18 +62,8 @@ const inscrireClient = async (req, res) => {
     // LIER AUTOMATIQUEMENT à l'entreprise
     if (entreprise_qr) {
       try {
-        // Format QR boutique : ENT-1-BOUTIQUEDAKARMODE
-        const parts = entreprise_qr.split('-');
-        const entreprise_id = parseInt(parts[1]);
-        
-        if (!isNaN(entreprise_id)) {
-          await pool.query(
-            `INSERT INTO client_entreprise (client_id, entreprise_id)
-             VALUES ($1, $2) ON CONFLICT DO NOTHING`,
-            [client.id, entreprise_id]
-          );
-          console.log(`✅ Client ${client.id} lié à l'entreprise ${entreprise_id}`);
-        }
+        const entrepriseId = await lierClientABoutiqueParQr(client.id, entreprise_qr);
+        if (entrepriseId) console.log(`✅ Client ${client.id} lié à l'entreprise ${entrepriseId}`);
       } catch (err) {
         console.error('❌ Erreur liaison:', err.message);
       }
@@ -131,6 +147,23 @@ const connecterClient = async (req, res) => {
   }
 };
 
+const lierClientBoutique = async (req, res) => {
+  if (req.user?.role !== 'client') {
+    return res.status(403).json({ message: '❌ Accès réservé aux clients' });
+  }
+
+  try {
+    const entrepriseId = await lierClientABoutiqueParQr(req.user.id, req.body.entreprise_qr);
+    if (!entrepriseId) {
+      return res.status(400).json({ message: '❌ QR code boutique invalide' });
+    }
+    return res.json({ message: '✅ Client lié à la boutique', entreprise_id: entrepriseId });
+  } catch (err) {
+    console.error('❌ Erreur liaison client-boutique:', err.message);
+    return res.status(500).json({ message: '❌ Erreur serveur', error: err.message });
+  }
+};
+
 const profilClient = async (req, res) => {
   try {
     const result = await pool.query(
@@ -187,6 +220,7 @@ const genererLienWallet = async (req, res) => {
 module.exports = { 
   inscrireClient, 
   connecterClient, 
+  lierClientBoutique,
   profilClient, 
   genererLienWallet 
 };

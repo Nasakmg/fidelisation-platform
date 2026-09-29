@@ -64,7 +64,7 @@ export default function CampagnesPage() {
       );
       const details = response.data.details;
       const recap = details
-        ? `\nEmails envoyés : ${details.emails_envoyes}. Push livrés : ${details.push_envoyes}/${details.appareils_cibles} appareils. Clients téléphone sans token : ${details.clients_sans_token}. Échecs : ${details.echecs}.`
+        ? `\nClients liés : ${details.clients_cibles} (email : ${details.clients_email}, téléphone : ${details.clients_telephone}). Emails envoyés : ${details.emails_envoyes}. Push livrés : ${details.push_envoyes}/${details.appareils_cibles} appareils. Clients téléphone sans token : ${details.clients_sans_token}. Échecs : ${details.echecs}.`
         : '';
       alert(`${response.data.message}${recap}`);
       fetchCampagnes();

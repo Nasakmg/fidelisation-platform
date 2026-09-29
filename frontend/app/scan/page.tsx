@@ -41,9 +41,20 @@ function ScanContent() {
   useEffect(() => {
     // Si déjà connecté → aller directement au succès
     if (clientToken && boutique) {
-      fetchProfilClient();
+      void axios.post(
+        `${API_URL}/api/clients/boutique/liaison`,
+        { entreprise_qr: boutiqueQR },
+        { headers: { Authorization: `Bearer ${clientToken}` } }
+      ).then(() => axios.get(`${API_URL}/api/clients/profil`, {
+        headers: { Authorization: `Bearer ${clientToken}` }
+      })).then(response => {
+        setClient(response.data);
+        setEtape('succes');
+      }).catch(err => {
+        console.error('Erreur rattachement à la boutique:', err);
+      });
     }
-  }, [clientToken, boutique]);
+  }, [clientToken, boutique, boutiqueQR]);
 
   const fetchBoutique = async () => {
     try {
@@ -77,6 +88,11 @@ function ScanContent() {
       const response = await axios.post(`${API_URL}/api/clients/connexion`, {
         identifiant, mode, mot_de_passe: motDePasse
       });
+      await axios.post(
+        `${API_URL}/api/clients/boutique/liaison`,
+        { entreprise_qr: boutiqueQR },
+        { headers: { Authorization: `Bearer ${response.data.token}` } }
+      );
       clientLogin(response.data.token, response.data.client);
       setClient(response.data.client);
       setEtape('succes');
