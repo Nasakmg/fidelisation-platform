@@ -37,11 +37,12 @@ export const ClientAuthProvider = ({ children }: { children: React.ReactNode }) 
         const { listenForForegroundNotifications } = await import('../firebase');
         const stopListening = await listenForForegroundNotifications((payload) => {
           if (!('Notification' in window) || Notification.permission !== 'granted') return;
-          const title = payload.notification?.title || 'E-Wallet';
+          const data = payload.data || {};
+          const title = data.title || 'E-Wallet';
           const options = {
-            body: payload.notification?.body || '',
-            icon: '/icon.svg',
-            data: payload.data || {}
+            body: data.body || '',
+            icon: data.icon || '/icon.svg',
+            data
           };
           void navigator.serviceWorker.ready
             .then(registration => registration.showNotification(title, options))

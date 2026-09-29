@@ -19,9 +19,11 @@ const envoyerEmail = async (destinataire, sujet, message) => {
     return { success: false, error: 'Resend non configuré' };
   }
 
+  const expediteur = process.env.RESEND_FROM_EMAIL || 'E-Wallet <onboarding@resend.dev>';
+
   try {
     const result = await client.emails.send({
-      from: 'E-Wallet <onboarding@resend.dev>',
+      from: expediteur,
       to: [destinataire],
       subject: sujet,
       html: `

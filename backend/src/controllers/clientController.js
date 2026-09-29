@@ -6,10 +6,16 @@ const { genererLienWallet: genererLienWalletConfig } = require('../config/google
 
 const inscrireClient = async (req, res) => {
   const { nom, prenom, email, telephone, mot_de_passe, date_naissance, entreprise_qr } = req.body;
+  const emailNormalise = String(email || '').trim().toLowerCase();
+  const telephoneNormalise = String(telephone || '').trim();
 
   try {
+    if (!emailNormalise || !telephoneNormalise || !mot_de_passe) {
+      return res.status(400).json({ message: '❌ Email, téléphone et mot de passe requis' });
+    }
+
     const existe = await pool.query(
-      'SELECT id FROM clients WHERE email = $1', [email]
+      'SELECT id FROM clients WHERE LOWER(TRIM(email)) = $1', [emailNormalise]
     );
     if (existe.rows.length > 0) {
       return res.status(400).json({ message: '❌ Email déjà utilisé' });
@@ -19,10 +25,10 @@ const inscrireClient = async (req, res) => {
     const qr_code = 'USR-' + crypto.randomBytes(6).toString('hex').toUpperCase();
 
     const result = await pool.query(
-      `INSERT INTO clients (nom, prenom, email, telephone, mot_de_passe, qr_code, date_naissance)
-       VALUES ($1, $2, $3, $4, $5, $6, $7) 
-       RETURNING id, nom, prenom, email, qr_code, points_total`,
-      [nom, prenom, email, telephone, hash, qr_code, date_naissance || null]
+      `INSERT INTO clients (nom, prenom, email, telephone, mot_de_passe, qr_code, date_naissance, mode_connexion)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, 'email')
+       RETURNING id, nom, prenom, email, telephone, qr_code, points_total, mode_connexion`,
+      [nom, prenom, emailNormalise, telephoneNormalise, hash, qr_code, date_naissance || null]
     );
 
     const client = result.rows[0];
@@ -65,11 +71,23 @@ const inscrireClient = async (req, res) => {
 };
 
 const connecterClient = async (req, res) => {
-  const { email, mot_de_passe } = req.body;
+  const { identifiant, mode, email, mot_de_passe } = req.body;
+  const valeurIdentifiant = String(identifiant || email || '').trim();
+  const modeConnexion = mode || (valeurIdentifiant.includes('@') ? 'email' : 'telephone');
+  const identifiantNormalise = modeConnexion === 'email'
+    ? valeurIdentifiant.toLowerCase()
+    : valeurIdentifiant;
+
+  if (!['email', 'telephone'].includes(modeConnexion) || !identifiantNormalise || !mot_de_passe) {
+    return res.status(400).json({ message: '❌ Identifiant et mot de passe requis' });
+  }
 
   try {
     const result = await pool.query(
-      'SELECT * FROM clients WHERE email = $1 OR telephone = $1', [email]
+      modeConnexion === 'email'
+        ? 'SELECT * FROM clients WHERE LOWER(TRIM(email)) = $1'
+        : 'SELECT * FROM clients WHERE telephone = $1',
+      [identifiantNormalise]
     );
 
     if (result.rows.length === 0) {
@@ -82,6 +100,11 @@ const connecterClient = async (req, res) => {
     if (!valide) {
       return res.status(400).json({ message: '❌ Identifiants incorrects' });
     }
+
+    await pool.query(
+      'UPDATE clients SET mode_connexion = $1 WHERE id = $2',
+      [modeConnexion, client.id]
+    );
 
     const token = jwt.sign(
       { id: client.id, role: 'client' },
@@ -98,7 +121,8 @@ const connecterClient = async (req, res) => {
         prenom: client.prenom,
         email: client.email,
         qr_code: client.qr_code,
-        points_total: client.points_total
+        points_total: client.points_total,
+        mode_connexion: modeConnexion
       }
     });
 
@@ -110,8 +134,8 @@ const connecterClient = async (req, res) => {
 const profilClient = async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT c.id, c.nom, c.prenom, c.email, c.telephone, 
-              c.qr_code, c.points_total, c.created_at,
+            `SELECT c.id, c.nom, c.prenom, c.email, c.telephone,
+              c.qr_code, c.points_total, c.created_at, c.mode_connexion,
               array_agg(DISTINCT e.nom) FILTER (WHERE e.nom IS NOT NULL) as boutiques
        FROM clients c
        LEFT JOIN client_entreprise ce ON c.id = ce.client_id

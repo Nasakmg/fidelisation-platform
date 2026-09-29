@@ -4,7 +4,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useClientAuth } from '../context/ClientAuthContext';
-import { Sparkles, ArrowRight, QrCode, Star, CheckCircle } from 'lucide-react';
+import { Sparkles, ArrowRight, QrCode, Star, CheckCircle, Mail, Phone } from 'lucide-react';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
@@ -21,7 +21,8 @@ function ScanContent() {
   const [erreur, setErreur] = useState('');
 
   // Connexion
-  const [email, setEmail] = useState('');
+  const [mode, setMode] = useState<'email' | 'telephone'>('email');
+  const [identifiant, setIdentifiant] = useState('');
   const [motDePasse, setMotDePasse] = useState('');
 
   // Inscription
@@ -74,13 +75,13 @@ function ScanContent() {
     setErreur('');
     try {
       const response = await axios.post(`${API_URL}/api/clients/connexion`, {
-        email, mot_de_passe: motDePasse
+        identifiant, mode, mot_de_passe: motDePasse
       });
       clientLogin(response.data.token, response.data.client);
       setClient(response.data.client);
       setEtape('succes');
       // Demander permission notifications après connexion/inscription
-      if (typeof window !== 'undefined' && 'Notification' in window) {
+      if (mode === 'telephone' && typeof window !== 'undefined' && 'Notification' in window) {
         const permission = await Notification.requestPermission();
         if (permission === 'granted') {
           try {
@@ -117,26 +118,6 @@ function ScanContent() {
       clientLogin(response.data.token, response.data.client);
       setClient(response.data.client);
       setEtape('succes');
-      // Demander permission notifications après connexion/inscription
-      if (typeof window !== 'undefined' && 'Notification' in window) {
-        const permission = await Notification.requestPermission();
-        if (permission === 'granted') {
-          try {
-            const { requestNotificationPermission } = await import('../firebase');
-            const fcmToken = await requestNotificationPermission();
-            if (fcmToken && response.data.token) {
-              await axios.post(
-                `${process.env.NEXT_PUBLIC_API_URL}/api/clients/fcm-token`,
-                { token: fcmToken },
-                { headers: { Authorization: `Bearer ${response.data.token}` } }
-              );
-              console.log('✅ Token FCM enregistré');
-            }
-          } catch (err) {
-            console.log('ℹ️ Firebase non disponible');
-          }
-        }
-      }
     } catch (err: any) {
       setErreur(err.response?.data?.message || '❌ Erreur inscription');
     }
@@ -171,7 +152,7 @@ function ScanContent() {
           {boutique && (
             <div className="bg-white/[0.05] border border-white/[0.08] rounded-2xl p-4 mb-2">
               <p className="text-gray-400 text-xs mb-1">Vous êtes chez</p>
-              <p className="text-white font-bold text-xl">{boutique.nom}</p>
+              <p className="text-white font-bold uppercase text-xl">{boutique.nom}</p>
               <p className="text-gray-500 text-sm">{boutique.secteur}</p>
             </div>
           )}
@@ -248,14 +229,33 @@ function ScanContent() {
               <h2 className="text-white font-bold text-xl mb-6">Connexion</h2>
 
               <form onSubmit={handleConnexion} className="space-y-4">
+                <div className="grid grid-cols-2 gap-2" role="group" aria-label="Mode de connexion">
+                  {([
+                    { value: 'email', label: 'Email', icon: Mail },
+                    { value: 'telephone', label: 'Téléphone', icon: Phone }
+                  ] as const).map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => { setMode(option.value); setIdentifiant(''); }}
+                      aria-pressed={mode === option.value}
+                      className={`flex items-center justify-center gap-2 rounded-xl border py-3 text-sm transition-colors ${mode === option.value ? 'border-yellow-400/40 bg-yellow-400/10 text-yellow-300' : 'border-white/[0.08] bg-white/[0.03] text-gray-500'}`}
+                    >
+                      <option.icon size={15} />
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
                 <div>
-                  <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Email</label>
+                  <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    {mode === 'email' ? 'Email' : 'Numéro de téléphone'}
+                  </label>
                   <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    type={mode === 'email' ? 'email' : 'tel'}
+                    value={identifiant}
+                    onChange={(e) => setIdentifiant(e.target.value)}
                     className="w-full bg-white/[0.04] border border-white/[0.08] text-white rounded-xl px-4 py-3 mt-1 focus:outline-none focus:border-yellow-500/50 transition-all placeholder:text-gray-700 text-sm"
-                    placeholder="votre@email.com"
+                    placeholder={mode === 'email' ? 'votre@email.com' : '+221 77 000 00 00'}
                     required
                   />
                 </div>

@@ -199,6 +199,11 @@ export default function ProfilPage() {
           <h1 className="text-white text-xl font-bold mb-1">
             {client?.nom} {client?.prenom}
           </h1>
+          {client?.boutiques?.filter(Boolean).map((boutique: string) => (
+            <p key={boutique} className="mb-1 text-sm font-bold uppercase text-yellow-300">
+              {boutique}
+            </p>
+          ))}
           <p className="text-gray-500 text-sm mb-3">{client?.email}</p>
           <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-sm font-medium ${badge.bg} ${badge.color}`}>
             <BadgeIcon size={13} />
@@ -315,16 +320,22 @@ export default function ProfilPage() {
             <div className="min-w-0 flex-1">
               <h3 className="text-white font-semibold">Notifications de campagne</h3>
               <p className="mt-1 text-xs text-gray-500">
-                Activez-les sur chaque appareil où vous souhaitez recevoir les offres.
+                Vos campagnes sont envoyées par {client?.mode_connexion === 'telephone' ? 'notification push' : 'email'}, selon votre dernière connexion.
               </p>
-              <button
-                type="button"
-                onClick={handleEnableNotifications}
-                disabled={pushLoading}
-                className="mt-3 min-h-10 rounded-lg bg-yellow-400 px-4 text-sm font-semibold text-black disabled:opacity-50"
-              >
-                {pushLoading ? 'Activation…' : 'Activer les notifications'}
-              </button>
+              {client?.mode_connexion === 'telephone' ? (
+                <button
+                  type="button"
+                  onClick={handleEnableNotifications}
+                  disabled={pushLoading}
+                  className="mt-3 min-h-10 rounded-lg bg-yellow-400 px-4 text-sm font-semibold text-black disabled:opacity-50"
+                >
+                  {pushLoading ? 'Activation…' : 'Activer les notifications'}
+                </button>
+              ) : (
+                <p className="mt-3 text-xs text-gray-500">
+                  Reconnectez-vous avec votre numéro de téléphone pour recevoir les campagnes par push.
+                </p>
+              )}
               {pushMessage && <p role="status" className="mt-3 text-sm text-gray-300">{pushMessage}</p>}
             </div>
           </div>

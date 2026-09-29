@@ -49,7 +49,13 @@ const initAdmin = () => {
   }
 };
 
-const envoyerNotificationPush = async (tokens, titre, message, nomEntreprise = 'Plateforme de fidélisation') => {
+const envoyerNotificationPush = async (
+  tokens,
+  titre,
+  message,
+  nomEntreprise = 'Plateforme de fidélisation',
+  iconeEntreprise = null
+) => {
   if (!tokens || tokens.length === 0) return;
 
   const ok = initAdmin();
@@ -57,24 +63,18 @@ const envoyerNotificationPush = async (tokens, titre, message, nomEntreprise = '
     throw new Error('Firebase Admin n\'est pas initialisé. Vérifiez les credentials Firebase.');
   }
 
-  // On combine le titre de la campagne et le contenu du message
   const contenuNotification = titre ? `${titre}\n${message}` : message;
+  const icon = iconeEntreprise || 'https://fidelisation-platform.vercel.app/icon.svg';
 
   try {
     const multicastMessage = {
-      notification: {
-        title: nomEntreprise, // Nom de l'entreprise comme titre principal
-        body: contenuNotification, // Titre de la campagne + message
+      data: {
+        title: nomEntreprise,
+        body: contenuNotification,
+        icon,
+        link: 'https://fidelisation-platform.vercel.app/profil'
       },
       webpush: {
-        notification: {
-          title: nomEntreprise,
-          body: contenuNotification,
-          icon: 'https://fidelisation-platform.vercel.app/icon-192.png',
-          requireInteraction: true,
-          vibrate: [200, 100, 200],
-          badge: 'https://fidelisation-platform.vercel.app/icon-192.png',
-        },
         fcmOptions: {
           link: 'https://fidelisation-platform.vercel.app/profil',
         },
@@ -108,6 +108,7 @@ const envoyerNotificationPush = async (tokens, titre, message, nomEntreprise = '
     return response;
   } catch (err) {
     console.error('❌ Erreur Push:', err.message);
+    throw err;
   }
 };
 

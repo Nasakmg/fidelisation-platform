@@ -6,7 +6,7 @@ import { useAuth } from '../../context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft, Megaphone, Plus, Send,
-  Trash2, Bell, MessageSquare, Mail,
+  Trash2, Bell,
   Clock, CheckCircle, X, Zap
 } from 'lucide-react';
 
@@ -18,7 +18,7 @@ export default function CampagnesPage() {
   const [showForm, setShowForm] = useState(false);
   const [envoi, setEnvoi] = useState<number | null>(null);
   const [formData, setFormData] = useState({
-    titre: '', message: '', canal: 'push'
+    titre: '', message: ''
   });
 
   useEffect(() => {
@@ -48,7 +48,7 @@ export default function CampagnesPage() {
         formData,
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      setFormData({ titre: '', message: '', canal: 'push' });
+      setFormData({ titre: '', message: '' });
       setShowForm(false);
       fetchCampagnes();
     } catch (err) { console.error(err); }
@@ -63,8 +63,8 @@ export default function CampagnesPage() {
         { headers: { Authorization: `Bearer ${token}` } }
       );
       const details = response.data.details;
-      const recap = details && typeof details.appareils_cibles === 'number'
-        ? `\nPush livrés : ${details.push_envoyes}/${details.appareils_cibles} appareils.\nClients liés sans notifications activées : ${details.clients_sans_token}.`
+      const recap = details
+        ? `\nEmails envoyés : ${details.emails_envoyes}. Push livrés : ${details.push_envoyes}/${details.appareils_cibles} appareils. Clients téléphone sans token : ${details.clients_sans_token}. Échecs : ${details.echecs}.`
         : '';
       alert(`${response.data.message}${recap}`);
       fetchCampagnes();
@@ -85,14 +85,6 @@ export default function CampagnesPage() {
       fetchCampagnes();
     } catch (err) { console.error(err); }
   };
-
-  const canaux = [
-    { value: 'push', label: 'Push', icon: Bell, color: 'text-blue-400 bg-blue-400/10 border-blue-400/20' },
-    { value: 'sms', label: 'SMS', icon: MessageSquare, color: 'text-green-400 bg-green-400/10 border-green-400/20' },
-    { value: 'email', label: 'Email', icon: Mail, color: 'text-purple-400 bg-purple-400/10 border-purple-400/20' },
-  ];
-
-  const getCanalInfo = (canal: string) => canaux.find(c => c.value === canal) || canaux[0];
 
   return (
     <div className="min-h-screen bg-[#080808]">
@@ -165,24 +157,7 @@ export default function CampagnesPage() {
                     />
                   </div>
 
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-400">Canal d'envoi</label>
-                    <div className="grid grid-cols-3 gap-2">
-                      {canaux.map((c) => (
-                        <button
-                          key={c.value}
-                          type="button"
-                          onClick={() => setFormData({...formData, canal: c.value})}
-                          className={`flex items-center justify-center gap-2 py-3 rounded-xl border transition-all text-sm font-medium ${
-                            formData.canal === c.value ? c.color : 'bg-white/[0.03] border-white/[0.06] text-gray-600 hover:text-gray-300'
-                          }`}
-                        >
-                          <c.icon size={15} />
-                          {c.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
+                  <p className="text-sm text-gray-500">Envoi par email ou notification push selon le dernier mode de connexion de chaque client.</p>
 
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-gray-400">Message</label>
@@ -250,8 +225,6 @@ export default function CampagnesPage() {
         ) : (
           <div className="space-y-3">
             {campagnes.map((campagne: any, i: number) => {
-              const canalInfo = getCanalInfo(campagne.canal);
-              const CanalIcon = canalInfo.icon;
               return (
                 <motion.div
                   key={campagne.id}
@@ -262,8 +235,8 @@ export default function CampagnesPage() {
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex items-start gap-4 flex-1">
-                      <div className={`w-11 h-11 rounded-xl flex items-center justify-center border ${canalInfo.color}`}>
-                        <CanalIcon size={18} />
+                      <div className="w-11 h-11 rounded-xl flex items-center justify-center border border-yellow-400/20 bg-yellow-400/10 text-yellow-400">
+                        <Bell size={18} />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-3 mb-1">
@@ -279,7 +252,7 @@ export default function CampagnesPage() {
                         </div>
                         <p className="text-gray-500 text-sm mb-3 line-clamp-2">{campagne.message}</p>
                         <div className="flex items-center gap-4 text-xs text-gray-700">
-                          <span>Canal : {campagne.canal}</span>
+                          <span>Canal : Automatique</span>
                           <span>•</span>
                           <span>Créée le {new Date(campagne.created_at).toLocaleDateString('fr-FR')}</span>
                           {campagne.date_envoi && (

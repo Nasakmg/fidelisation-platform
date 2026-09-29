@@ -1,11 +1,20 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../config/db');
-const { inscrireEntreprise, connecterEntreprise, getClients, supprimerClientEntreprise } = require('../controllers/entrepriseController');
+const {
+  inscrireEntreprise,
+  connecterEntreprise,
+  getClients,
+  supprimerClientEntreprise,
+  getNotificationIcon,
+  mettreAJourNotificationIcon
+} = require('../controllers/entrepriseController');
 const { verifyToken } = require('../middleware/auth');
 
 router.post('/inscription', inscrireEntreprise);
 router.post('/connexion', connecterEntreprise);
+router.get('/notification-icon', verifyToken, getNotificationIcon);
+router.patch('/notification-icon', verifyToken, mettreAJourNotificationIcon);
 router.get('/clients', verifyToken, getClients);
 router.delete('/clients/:id', verifyToken, supprimerClientEntreprise);
 

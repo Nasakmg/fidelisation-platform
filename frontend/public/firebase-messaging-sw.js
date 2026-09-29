@@ -14,23 +14,24 @@ const messaging = firebase.messaging();
 
 messaging.onBackgroundMessage((payload) => {
   console.log('[SW] Message reçu en arrière-plan:', payload);
-  
-  const title = payload.notification?.title || 'E-Wallet';
-  const body = payload.notification?.body || '';
+
+  const data = payload.data || {};
+  const title = data.title || 'E-Wallet';
+  const body = data.body || '';
   
   self.registration.showNotification(title, {
     body,
-    icon: '/icon.svg',
+    icon: data.icon || '/icon.svg',
     badge: '/icon.svg',
     vibrate: [200, 100, 200],
     requireInteraction: true,
-    data: payload.data || {}
+    data
   });
 });
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   event.waitUntil(
-    clients.openWindow('https://fidelisation-platform.vercel.app/profil')
+    clients.openWindow(event.notification.data?.link || 'https://fidelisation-platform.vercel.app/profil')
   );
 });

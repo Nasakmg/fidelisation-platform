@@ -1,16 +1,19 @@
 const pool = require('../config/db');
-const { envoyerSMS } = require('../config/twilio');
 const { envoyerEmail } = require('../config/resend');
 const { envoyerNotificationPush } = require('../config/firebaseAdmin');
 
 const creerCampagne = async (req, res) => {
-  const { titre, message, canal } = req.body;
+  const { titre, message } = req.body;
   const entreprise_id = req.user.id;
+  if (req.user?.role !== 'entreprise') {
+    return res.status(403).json({ message: '❌ Accès réservé aux entreprises' });
+  }
+
   try {
     const result = await pool.query(
       `INSERT INTO campagnes (entreprise_id, titre, message, canal, statut)
-       VALUES ($1, $2, $3, $4, 'brouillon') RETURNING *`,
-      [entreprise_id, titre, message, canal]
+       VALUES ($1, $2, $3, 'auto', 'brouillon') RETURNING *`,
+      [entreprise_id, titre, message]
     );
     res.status(201).json({ message: '✅ Campagne créée !', campagne: result.rows[0] });
   } catch (err) {
@@ -20,6 +23,10 @@ const creerCampagne = async (req, res) => {
 
 const getCampagnes = async (req, res) => {
   const entreprise_id = req.user.id;
+  if (req.user?.role !== 'entreprise') {
+    return res.status(403).json({ message: '❌ Accès réservé aux entreprises' });
+  }
+
   try {
     const result = await pool.query(
       `SELECT * FROM campagnes WHERE entreprise_id = $1 ORDER BY created_at DESC`,
@@ -34,171 +41,156 @@ const getCampagnes = async (req, res) => {
 const envoyerCampagne = async (req, res) => {
   const { id } = req.params;
   const entreprise_id = req.user.id;
+  if (req.user?.role !== 'entreprise') {
+    return res.status(403).json({ message: '❌ Accès réservé aux entreprises' });
+  }
+
+  let campagneReservee = false;
 
   try {
-    // 1. Vérifier que la campagne existe
     const campagneResult = await pool.query(
-      'SELECT * FROM campagnes WHERE id = $1 AND entreprise_id = $2',
+      `UPDATE campagnes
+       SET statut = 'en_cours'
+       WHERE id = $1 AND entreprise_id = $2 AND statut = 'brouillon'
+       RETURNING *`,
       [id, entreprise_id]
     );
 
     if (campagneResult.rows.length === 0) {
-      return res.status(404).json({ message: '❌ Campagne introuvable' });
+      const existe = await pool.query(
+        'SELECT id FROM campagnes WHERE id = $1 AND entreprise_id = $2',
+        [id, entreprise_id]
+      );
+      return existe.rows.length === 0
+        ? res.status(404).json({ message: '❌ Campagne introuvable' })
+        : res.status(409).json({ message: '❌ Cette campagne a déjà été envoyée ou est en cours d’envoi' });
     }
 
+    campagneReservee = true;
     const campagne = campagneResult.rows[0];
-
-    // 2. Récupérer le nom de l'entreprise
     const entrepriseResult = await pool.query(
-      'SELECT nom FROM entreprises WHERE id = $1',
+      'SELECT nom, notification_icon FROM entreprises WHERE id = $1',
       [entreprise_id]
     );
     const nomEntreprise = entrepriseResult.rows[0]?.nom || 'E-Wallet';
+    const iconeEntreprise = entrepriseResult.rows[0]?.notification_icon || null;
 
     let emailsEnvoyes = 0;
     let pushEnvoyes = 0;
-    let smsEnvoyes = 0;
     let echecs = 0;
     let appareilsCibles = 0;
     let clientsCibles = 0;
     let clientsSansToken = 0;
 
-    // 3. Gestion selon le canal
-    if (campagne.canal === 'email') {
-      const clientsResult = await pool.query(
-        `SELECT DISTINCT c.id, c.nom, c.prenom, c.email 
-         FROM clients c 
-         INNER JOIN client_entreprise ce ON c.id = ce.client_id 
-         WHERE ce.entreprise_id = $1 AND c.email IS NOT NULL`,
-        [entreprise_id]
-      );
+    const clientsResult = await pool.query(
+      `SELECT DISTINCT c.id, c.email, c.mode_connexion
+       FROM clients c
+       INNER JOIN client_entreprise ce ON ce.client_id = c.id
+       WHERE ce.entreprise_id = $1`,
+      [entreprise_id]
+    );
+    clientsCibles = clientsResult.rows.length;
 
-      for (const client of clientsResult.rows) {
-        await pool.query(
-          `INSERT INTO notifications (client_id, message, canal, statut) VALUES ($1, $2, 'email', 'envoyé')`,
-          [client.id, campagne.message]
+    for (const client of clientsResult.rows) {
+      const canal = client.mode_connexion === 'telephone' ? 'push' : 'email';
+      let tokens = [];
+
+      if (canal === 'push') {
+        const tokenResult = await pool.query(
+          'SELECT DISTINCT token FROM fcm_tokens WHERE client_id = $1',
+          [client.id]
         );
+        tokens = tokenResult.rows.map(row => row.token);
+        if (tokens.length === 0) {
+          clientsSansToken++;
+          continue;
+        }
+        appareilsCibles += tokens.length;
+      } else if (!client.email) {
+        echecs++;
+        continue;
+      }
+
+      const reservation = await pool.query(
+        `INSERT INTO notifications (campagne_id, client_id, message, canal, statut)
+         VALUES ($1, $2, $3, $4, 'en_cours')
+         ON CONFLICT (campagne_id, client_id, canal)
+         WHERE campagne_id IS NOT NULL DO NOTHING
+         RETURNING id`,
+        [campagne.id, client.id, campagne.message, canal]
+      );
+      if (reservation.rows.length === 0) continue;
+
+      if (canal === 'email') {
         const result = await envoyerEmail(
           client.email,
           `${campagne.titre} — ${nomEntreprise}`,
           campagne.message
         );
-        if (result.success) emailsEnvoyes++;
+        if (result?.success) emailsEnvoyes++;
         else echecs++;
-      }
-
-    } else if (campagne.canal === 'sms') {
-      const clientsResult = await pool.query(
-        `SELECT DISTINCT c.id, c.nom, c.telephone 
-         FROM clients c 
-         INNER JOIN client_entreprise ce ON c.id = ce.client_id 
-         WHERE ce.entreprise_id = $1 AND c.telephone IS NOT NULL`,
-        [entreprise_id]
-      );
-
-      for (const client of clientsResult.rows) {
         await pool.query(
-          `INSERT INTO notifications (client_id, message, canal, statut) VALUES ($1, $2, 'sms', 'envoyé')`,
-          [client.id, campagne.message]
+          'UPDATE notifications SET statut = $1 WHERE id = $2',
+          [result?.success ? 'envoyé' : 'échec', reservation.rows[0].id]
         );
-        const result = await envoyerSMS(client.telephone, `${nomEntreprise}: ${campagne.message}`);
-        if (result.success) smsEnvoyes++;
-        else echecs++;
+        continue;
       }
 
-   } else if (campagne.canal === 'push') {
-  const linkedClientsResult = await pool.query(
-    `SELECT COUNT(DISTINCT ce.client_id) AS total
-     FROM client_entreprise ce
-     INNER JOIN clients c ON c.id = ce.client_id
-     WHERE ce.entreprise_id = $1`,
-    [entreprise_id]
-  );
-  clientsCibles = Number(linkedClientsResult.rows[0]?.total || 0);
-
-  // Push can only reach clients who registered at least one device token.
-  const tokensResult = await pool.query(
-    `SELECT DISTINCT ft.token, c.id as client_id, c.nom 
-     FROM fcm_tokens ft
-     INNER JOIN clients c ON ft.client_id = c.id
-     INNER JOIN client_entreprise ce ON c.id = ce.client_id
-     WHERE ce.entreprise_id = $1`,
-    [entreprise_id]
-  );
-  appareilsCibles = tokensResult.rows.length;
-  const clientsAvecToken = new Set(tokensResult.rows.map(row => row.client_id)).size;
-  clientsSansToken = Math.max(0, clientsCibles - clientsAvecToken);
-
-  console.log(`🔔 ${appareilsCibles} appareil(s) FCM pour ${clientsCibles} client(s) liés; ${clientsSansToken} sans appareil inscrit (entreprise ${entreprise_id})`);
-
-  // Cas où aucun client n'a encore activé les notifications Push
-  if (tokensResult.rows.length === 0) {
-    await pool.query(
-      `UPDATE campagnes SET statut = 'envoyée', date_envoi = NOW() WHERE id = $1`,
-      [id]
-    );
-    return res.json({
-      success: true,
-      message: '⚠️ Aucun client n\'a encore activé les notifications Push pour votre entreprise.',
-      details: {
-        push_envoyes: 0,
-        echecs: 0,
-        appareils_cibles: 0,
-        clients_cibles: clientsCibles,
-        clients_sans_token: clientsCibles
+      let result;
+      try {
+        result = await envoyerNotificationPush(
+          tokens,
+          campagne.titre,
+          campagne.message,
+          nomEntreprise,
+          iconeEntreprise
+        );
+      } catch (err) {
+        console.error(`Échec push client ${client.id}:`, err.message);
       }
-    });
-  }
 
-  // 2. Historisation de la notification dans la BDD pour chaque client
-  for (const row of tokensResult.rows) {
+      const succesPush = result?.successCount || 0;
+      const echecsPush = result?.failureCount ?? tokens.length;
+      pushEnvoyes += succesPush;
+      echecs += echecsPush;
+      await pool.query(
+        'UPDATE notifications SET statut = $1 WHERE id = $2',
+        [succesPush > 0 ? (echecsPush > 0 ? 'partiel' : 'envoyé') : 'échec', reservation.rows[0].id]
+      );
+    }
+
     await pool.query(
-      `INSERT INTO notifications (client_id, message, canal, statut) 
-       VALUES ($1, $2, 'push', 'envoyé') 
-       ON CONFLICT DO NOTHING`,
-      [row.client_id, campagne.message]
-    );
-  }
-
-  // 3. Extraction de la liste des tokens et envoi groupé
-  const tokens = tokensResult.rows.map(r => r.token);
-
-  const result = await envoyerNotificationPush(
-    tokens,
-    campagne.titre,
-    campagne.message,
-    nomEntreprise
-  );
-
-  if (result) {
-    pushEnvoyes = result.successCount || 0;
-    echecs = result.failureCount || 0;
-  }
-}
-
-    // 4. Mettre à jour le statut de la campagne
-    await pool.query(
-      `UPDATE campagnes SET statut = 'envoyée', date_envoi = NOW() WHERE id = $1`,
-      [id]
+      `UPDATE campagnes SET statut = 'envoyée', date_envoi = NOW()
+       WHERE id = $1 AND entreprise_id = $2`,
+      [campagne.id, entreprise_id]
     );
 
     res.json({
       message: '✅ Campagne envoyée avec succès !',
       details: {
         emails_envoyes: emailsEnvoyes,
-        sms_envoyes: smsEnvoyes,
         push_envoyes: pushEnvoyes,
         echecs,
-        ...(campagne.canal === 'push' && {
-          appareils_cibles: appareilsCibles,
-          clients_cibles: clientsCibles,
-          clients_sans_token: clientsSansToken
-        })
+        appareils_cibles: appareilsCibles,
+        clients_cibles: clientsCibles,
+        clients_sans_token: clientsSansToken
       }
     });
 
   } catch (err) {
     console.error('❌ Erreur campagne:', err);
+    if (campagneReservee) {
+      await pool.query(
+        `UPDATE campagnes SET statut = 'échec'
+         WHERE id = $1 AND entreprise_id = $2 AND statut = 'en_cours'`,
+        [id, entreprise_id]
+      ).catch(updateErr => console.error('Échec mise à jour statut campagne:', updateErr.message));
+      await pool.query(
+        `UPDATE notifications SET statut = 'échec'
+         WHERE campagne_id = $1 AND statut = 'en_cours'`,
+        [id]
+      ).catch(updateErr => console.error('Échec mise à jour statut notifications:', updateErr.message));
+    }
     res.status(500).json({ message: '❌ Erreur serveur', error: err.message });
   }
 };
@@ -206,6 +198,9 @@ const envoyerCampagne = async (req, res) => {
 const supprimerCampagne = async (req, res) => {
   const { id } = req.params;
   const entreprise_id = req.user.id;
+  if (req.user?.role !== 'entreprise') {
+    return res.status(403).json({ message: '❌ Accès réservé aux entreprises' });
+  }
   try {
     await pool.query(
       'DELETE FROM campagnes WHERE id = $1 AND entreprise_id = $2',

@@ -5,6 +5,7 @@ const jwt = require('jsonwebtoken');
 // Inscription entreprise
 const inscrireEntreprise = async (req, res) => {
   const { nom, email, telephone, mot_de_passe, secteur, adresse, pays } = req.body;
+  const emailNormalise = String(email || '').trim().toLowerCase();
   
   // Déterminer la devise selon le pays
   const { getDevise } = require('../config/devises');
@@ -12,7 +13,7 @@ const inscrireEntreprise = async (req, res) => {
 
   try {
     const existe = await pool.query(
-      'SELECT id FROM entreprises WHERE email = $1', [email]
+      'SELECT id FROM entreprises WHERE LOWER(TRIM(email)) = $1', [emailNormalise]
     );
     if (existe.rows.length > 0) {
       return res.status(400).json({ message: '❌ Email déjà utilisé' });
@@ -23,8 +24,8 @@ const inscrireEntreprise = async (req, res) => {
     const result = await pool.query(
       `INSERT INTO entreprises (nom, email, telephone, mot_de_passe, secteur, adresse, pays, devise, symbole_devise)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) 
-       RETURNING id, nom, email, secteur, plan_abonnement, pays, devise, symbole_devise`,
-      [nom, email, telephone, hash, secteur, adresse, 
+      RETURNING id, nom, email, secteur, plan_abonnement, pays, devise, symbole_devise, notification_icon`,
+          [nom, emailNormalise, telephone, hash, secteur, adresse,
        pays || 'Sénégal', deviseInfo.code, deviseInfo.symbole]
     );
 
@@ -88,12 +89,67 @@ const connecterEntreprise = async (req, res) => {
         plan_abonnement: entreprise.plan_abonnement,
         pays: entreprise.pays,
         devise: entreprise.devise,
-        symbole_devise: entreprise.symbole_devise
+        symbole_devise: entreprise.symbole_devise,
+        notification_icon: entreprise.notification_icon
       }
     });
 
   } catch (err) {
     res.status(500).json({ message: '❌ Erreur serveur', error: err.message });
+  }
+};
+
+const getNotificationIcon = async (req, res) => {
+  if (req.user?.role !== 'entreprise') {
+    return res.status(403).json({ message: '❌ Accès réservé aux entreprises' });
+  }
+
+  try {
+    const result = await pool.query(
+      'SELECT notification_icon FROM entreprises WHERE id = $1',
+      [req.user.id]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: '❌ Entreprise introuvable' });
+    }
+    return res.json({ notification_icon: result.rows[0].notification_icon });
+  } catch (err) {
+    return res.status(500).json({ message: '❌ Erreur serveur', error: err.message });
+  }
+};
+
+const mettreAJourNotificationIcon = async (req, res) => {
+  if (req.user?.role !== 'entreprise') {
+    return res.status(403).json({ message: '❌ Accès réservé aux entreprises' });
+  }
+
+  const icon = typeof req.body.notification_icon === 'string'
+    ? req.body.notification_icon.trim()
+    : '';
+  let iconUrl;
+  try {
+    iconUrl = new URL(icon);
+  } catch {}
+  if (icon && (icon.length > 2048 || iconUrl?.protocol !== 'https:')) {
+    return res.status(400).json({ message: '❌ Fournissez une URL HTTPS valide (2048 caractères maximum)' });
+  }
+
+  try {
+    const result = await pool.query(
+      `UPDATE entreprises SET notification_icon = $1
+       WHERE id = $2
+       RETURNING notification_icon`,
+      [icon || null, req.user.id]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: '❌ Entreprise introuvable' });
+    }
+    return res.json({
+      message: '✅ Icône de notification mise à jour',
+      notification_icon: result.rows[0].notification_icon
+    });
+  } catch (err) {
+    return res.status(500).json({ message: '❌ Erreur serveur', error: err.message });
   }
 };
 
@@ -165,5 +221,12 @@ const supprimerClientEntreprise = async (req, res) => {
   }
 };
 
-module.exports = { inscrireEntreprise, connecterEntreprise, getClients, supprimerClientEntreprise };
+module.exports = {
+  inscrireEntreprise,
+  connecterEntreprise,
+  getClients,
+  supprimerClientEntreprise,
+  getNotificationIcon,
+  mettreAJourNotificationIcon
+};
 

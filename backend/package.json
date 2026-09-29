@@ -11,7 +11,8 @@
     "migrate:statut": "node src/config/migration_statut.js",
     "migrate:fcm": "node src/config/migration_fcm.js",
     "migrate:devise": "node src/config/migration_devise.js",
-    "migrate:liaison": "node src/config/migration_liaison.js"
+    "migrate:liaison": "node src/config/migration_liaison.js",
+    "migrate:campaign-routing": "node src/config/migration_campaign_routing.js"
   },
   "keywords": [],
   "author": "",

@@ -4,10 +4,11 @@ import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import { motion } from 'framer-motion';
 import { useClientAuth } from '../context/ClientAuthContext';
-import { Mail, Lock, ArrowRight, Sparkles, UserCircle } from 'lucide-react';
+import { Mail, Phone, Lock, ArrowRight, Sparkles, UserCircle } from 'lucide-react';
 
 export default function ClientLoginPage() {
-  const [email, setEmail] = useState('');
+  const [mode, setMode] = useState<'email' | 'telephone'>('email');
+  const [identifiant, setIdentifiant] = useState('');
   const [motDePasse, setMotDePasse] = useState('');
   const [erreur, setErreur] = useState('');
   const [chargement, setChargement] = useState(false);
@@ -21,9 +22,29 @@ export default function ClientLoginPage() {
     try {
       const response = await axios.post(
         `${process.env.NEXT_PUBLIC_API_URL}/api/clients/connexion`,
-        { email, mot_de_passe: motDePasse }
+        { identifiant, mode, mot_de_passe: motDePasse }
       );
       clientLogin(response.data.token, response.data.client);
+      if (mode === 'telephone' && 'Notification' in window) {
+        try {
+          const permission = Notification.permission === 'granted'
+            ? 'granted'
+            : await Notification.requestPermission();
+          if (permission === 'granted') {
+            const { requestNotificationPermission } = await import('../firebase');
+            const fcmToken = await requestNotificationPermission();
+            if (fcmToken) {
+              await axios.post(
+                `${process.env.NEXT_PUBLIC_API_URL}/api/clients/fcm-token`,
+                { token: fcmToken },
+                { headers: { Authorization: `Bearer ${response.data.token}` } }
+              );
+            }
+          }
+        } catch {
+          console.warn('Inscription FCM ignorée');
+        }
+      }
       router.push('/profil');
     } catch (err: any) {
       setErreur(err.response?.data?.message || '❌ Erreur de connexion');
@@ -64,16 +85,37 @@ export default function ClientLoginPage() {
 
         <div className="bg-[#0d0d0d] border border-white/[0.06] rounded-2xl p-8">
           <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-2 gap-2" role="group" aria-label="Mode de connexion">
+              {([
+                { value: 'email', label: 'Email', icon: Mail },
+                { value: 'telephone', label: 'Téléphone', icon: Phone }
+              ] as const).map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => { setMode(option.value); setIdentifiant(''); }}
+                  aria-pressed={mode === option.value}
+                  className={`flex items-center justify-center gap-2 rounded-xl border py-3 text-sm transition-colors ${mode === option.value ? 'border-yellow-400/40 bg-yellow-400/10 text-yellow-300' : 'border-white/[0.08] bg-white/[0.03] text-gray-500'}`}
+                >
+                  <option.icon size={15} />
+                  {option.label}
+                </button>
+              ))}
+            </div>
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Email</label>
+              <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+                {mode === 'email' ? 'Email' : 'Numéro de téléphone'}
+              </label>
               <div className="relative">
-                <Mail size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600" />
+                {mode === 'email'
+                  ? <Mail size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600" />
+                  : <Phone size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600" />}
                 <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  type={mode === 'email' ? 'email' : 'tel'}
+                  value={identifiant}
+                  onChange={(e) => setIdentifiant(e.target.value)}
                   className="w-full bg-white/[0.04] border border-white/[0.08] text-white rounded-xl pl-11 pr-4 py-3.5 focus:outline-none focus:border-yellow-500/50 transition-all placeholder:text-gray-700 text-sm"
-                  placeholder="votre@email.com"
+                  placeholder={mode === 'email' ? 'votre@email.com' : '+221 77 000 00 00'}
                   required
                 />
               </div>
