@@ -62,13 +62,33 @@ router.get('/generate', verifyToken, async (req, res) => {
       return res.status(404).json({ message: '❌ Client introuvable' });
     }
 
+    const entrepriseResult = await pool.query(
+      `SELECT e.id, e.nom
+       FROM client_entreprise ce
+       INNER JOIN entreprises e ON e.id = ce.entreprise_id
+       LEFT JOIN (
+         SELECT entreprise_id, MAX(created_at) AS derniere_transaction
+         FROM transactions
+         WHERE client_id = $1
+         GROUP BY entreprise_id
+       ) t ON t.entreprise_id = e.id
+       WHERE ce.client_id = $1
+       ORDER BY t.derniere_transaction DESC NULLS LAST, ce.created_at DESC, e.id DESC
+       LIMIT 1`,
+      [client.id]
+    );
+    const nomEntreprise = entrepriseResult.rows[0]?.nom || 'E-Wallet';
+
     const pass = await PKPass.from(
       {
         model: getTemplatePath(),
         certificates: getCertificates()
       },
       {
-        serialNumber: `EWALLET-${client.id}-${Date.now()}`
+        serialNumber: `EWALLET-${client.id}-${Date.now()}`,
+        organizationName: nomEntreprise,
+        logoText: nomEntreprise,
+        description: `Carte de fidélité ${nomEntreprise}`
       }
     );
 
@@ -78,7 +98,7 @@ router.get('/generate', verifyToken, async (req, res) => {
 
     pass.primaryFields.push({
       key: 'balance',
-      label: 'Points fidélité',
+      label: 'Solde',
       value: `${client.points_total ?? 0} pts`,
       textAlignment: 'PKTextAlignmentCenter'
     });
@@ -86,6 +106,11 @@ router.get('/generate', verifyToken, async (req, res) => {
       key: 'holder_name',
       label: 'Titulaire',
       value: `${client.prenom || ''} ${client.nom || ''}`.trim() || 'Client'
+    });
+    pass.secondaryFields.push({
+      key: 'loyalty_program',
+      label: 'Programme',
+      value: 'Points fidélité'
     });
     pass.auxiliaryFields.push({
       key: 'member_since',
