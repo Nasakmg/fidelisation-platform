@@ -107,11 +107,6 @@ router.get('/generate', verifyToken, async (req, res) => {
       label: 'Titulaire',
       value: `${client.prenom || ''} ${client.nom || ''}`.trim() || 'Client'
     });
-    pass.secondaryFields.push({
-      key: 'loyalty_program',
-      label: 'Programme',
-      value: 'Points fidélité'
-    });
     pass.auxiliaryFields.push({
       key: 'member_since',
       label: 'Membre depuis',
