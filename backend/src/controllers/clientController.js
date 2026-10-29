@@ -40,11 +40,73 @@ const inscrireClient = async (req, res) => {
       return res.status(400).json({ message: '❌ Email, téléphone et mot de passe requis' });
     }
 
-    const existe = await pool.query(
-      'SELECT id FROM clients WHERE LOWER(TRIM(email)) = $1', [emailNormalise]
+    const clientExistantResult = await pool.query(
+      `SELECT id, nom, prenom, email, telephone, mot_de_passe, qr_code,
+              points_total, mode_connexion
+       FROM clients
+       WHERE LOWER(TRIM(email)) = $1 OR telephone = $2`,
+      [emailNormalise, telephoneNormalise]
     );
-    if (existe.rows.length > 0) {
-      return res.status(400).json({ message: '❌ Email déjà utilisé' });
+
+    if (clientExistantResult.rows.length > 0) {
+      if (clientExistantResult.rows.length !== 1) {
+        return res.status(409).json({
+          message: '❌ Cet email et ce téléphone appartiennent à des comptes différents'
+        });
+      }
+
+      const clientExistant = clientExistantResult.rows[0];
+      if (
+        clientExistant.email.trim().toLowerCase() !== emailNormalise
+        || clientExistant.telephone !== telephoneNormalise
+      ) {
+        return res.status(409).json({
+          message: '❌ Cet email ou ce téléphone est déjà associé à un autre compte'
+        });
+      }
+
+      if (!entreprise_qr) {
+        return res.status(409).json({
+          message: '❌ Un compte existe déjà avec ces coordonnées. Connectez-vous pour continuer'
+        });
+      }
+
+      const motDePasseValide = await bcrypt.compare(
+        String(mot_de_passe),
+        clientExistant.mot_de_passe
+      );
+      if (!motDePasseValide) {
+        return res.status(401).json({
+          message: '❌ Email, téléphone ou mot de passe incorrect'
+        });
+      }
+
+      const entrepriseId = await lierClientABoutiqueParQr(clientExistant.id, entreprise_qr);
+      if (!entrepriseId) {
+        return res.status(400).json({ message: '❌ QR code boutique invalide' });
+      }
+
+      const token = jwt.sign(
+        { id: clientExistant.id, role: 'client' },
+        process.env.JWT_SECRET,
+        { expiresIn: '7d' }
+      );
+      const client = {
+        id: clientExistant.id,
+        nom: clientExistant.nom,
+        prenom: clientExistant.prenom,
+        email: clientExistant.email,
+        telephone: clientExistant.telephone,
+        qr_code: clientExistant.qr_code,
+        points_total: clientExistant.points_total,
+        mode_connexion: clientExistant.mode_connexion
+      };
+
+      return res.status(200).json({
+        message: '✅ Compte existant associé à la nouvelle boutique',
+        token,
+        client
+      });
     }
 
     const hash = await bcrypt.hash(String(mot_de_passe), 10);
@@ -82,6 +144,11 @@ const inscrireClient = async (req, res) => {
     });
 
   } catch (err) {
+    if (err.code === '23505') {
+      return res.status(409).json({
+        message: '❌ Cet email ou ce téléphone est déjà associé à un compte'
+      });
+    }
     res.status(500).json({ message: '❌ Erreur serveur', error: err.message });
   }
 };
