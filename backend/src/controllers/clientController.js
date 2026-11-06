@@ -234,12 +234,25 @@ const lierClientBoutique = async (req, res) => {
 const profilClient = async (req, res) => {
   try {
     const result = await pool.query(
-            `SELECT c.id, c.nom, c.prenom, c.email, c.telephone,
+      `SELECT c.id, c.nom, c.prenom, c.email, c.telephone,
               c.qr_code, c.points_total, c.created_at, c.mode_connexion,
-              array_agg(DISTINCT e.nom) FILTER (WHERE e.nom IS NOT NULL) as boutiques
+              COALESCE(
+                json_agg(json_build_object(
+                  'id', e.id,
+                  'nom', e.nom,
+                  'points_total', COALESCE(ep.points_total, 0)
+                )) FILTER (WHERE e.id IS NOT NULL),
+                '[]'::json
+              ) AS boutiques
        FROM clients c
        LEFT JOIN client_entreprise ce ON c.id = ce.client_id
        LEFT JOIN entreprises e ON ce.entreprise_id = e.id
+       LEFT JOIN (
+         SELECT entreprise_id, SUM(points_gagnes)::integer AS points_total
+         FROM transactions
+         WHERE client_id = $1
+         GROUP BY entreprise_id
+       ) ep ON ep.entreprise_id = e.id
        WHERE c.id = $1
        GROUP BY c.id`,
       [req.user.id]
@@ -254,24 +267,36 @@ const profilClient = async (req, res) => {
 const genererLienWallet = async (req, res) => {
   try {
     const clientId = req.user ? req.user.id : req.body.client_id;
-    
-    if (!clientId) {
-      return res.status(400).json({ message: '❌ ID client manquant' });
+    const entrepriseId = Number(req.body.entreprise_id);
+
+    if (!clientId || !Number.isSafeInteger(entrepriseId) || entrepriseId <= 0) {
+      return res.status(400).json({ message: '❌ Boutique requise pour générer la carte' });
     }
 
     const result = await pool.query(
       'SELECT id, nom, prenom, email, qr_code, points_total, created_at FROM clients WHERE id = $1',
       [clientId]
     );
-
     if (result.rows.length === 0) {
       return res.status(404).json({ message: '❌ Client non trouvé' });
     }
 
     const client = result.rows[0];
+    const entrepriseResult = await pool.query(
+      `SELECT e.id, e.nom, COALESCE(SUM(t.points_gagnes), 0)::integer AS points_total
+       FROM client_entreprise ce
+       INNER JOIN entreprises e ON e.id = ce.entreprise_id
+       LEFT JOIN transactions t
+         ON t.client_id = ce.client_id AND t.entreprise_id = ce.entreprise_id
+       WHERE ce.client_id = $1 AND e.id = $2
+       GROUP BY e.id`,
+      [clientId, entrepriseId]
+    );
+    if (entrepriseResult.rows.length === 0) {
+      return res.status(404).json({ message: '❌ Boutique non associée à ce compte' });
+    }
 
-    // Délégation de la génération à googleWallet.js (qui utilise fidelisation_card et le bon ISSUER_ID)
-    const saveUrl = await genererLienWalletConfig(client);
+    const saveUrl = await genererLienWalletConfig(client, entrepriseResult.rows[0]);
 
     return res.json({
       message: '✅ Lien Google Wallet généré avec succès !',

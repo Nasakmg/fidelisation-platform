@@ -16,8 +16,8 @@ export default function ProfilPage() {
   const { clientToken, clientLogout } = useClientAuth();
   const router = useRouter();
   const [client, setClient] = useState<any>(null);
-  const [walletLoading, setWalletLoading] = useState(false);
-  const [appleWalletLoading, setAppleWalletLoading] = useState(false);
+  const [walletLoading, setWalletLoading] = useState<number | null>(null);
+  const [appleWalletLoading, setAppleWalletLoading] = useState<number | null>(null);
   const [pushLoading, setPushLoading] = useState(false);
   const [pushMessage, setPushMessage] = useState('');
   const [chargement, setChargement] = useState(true);
@@ -83,13 +83,13 @@ export default function ProfilPage() {
     }
   };
 
-  const handleGoogleWallet = async () => {
-    setWalletLoading(true);
+  const handleGoogleWallet = async (entrepriseId: number) => {
+    setWalletLoading(entrepriseId);
     try {
       // 1. Requête POST pour correspondre à la route backend
       const response = await axios.post(
         `${process.env.NEXT_PUBLIC_API_URL}/api/clients/wallet`,
-        {},
+        { entreprise_id: entrepriseId },
         { headers: { Authorization: `Bearer ${clientToken}` } }
       );
 
@@ -97,23 +97,23 @@ export default function ProfilPage() {
       const walletUrl = response.data?.saveUrl || response.data?.url;
 
       if (walletUrl) {
-        window.location.href = walletUrl; // Redirection directe vers Google Wallet
+        window.location.href = walletUrl;
       } else {
         console.error('❌ Lien Google Wallet introuvable dans la réponse.');
       }
     } catch (err: any) {
       console.error('❌ Erreur Google Wallet:', err?.response?.data || err.message);
     } finally {
-      setWalletLoading(false);
+      setWalletLoading(null);
     }
   };
 
 
-  const handleAppleWallet = async () => {
-    setAppleWalletLoading(true);
+  const handleAppleWallet = async (entrepriseId: number) => {
+    setAppleWalletLoading(entrepriseId);
     try {
       const response = await axios.get(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/apple-wallet/generate`,
+        `${process.env.NEXT_PUBLIC_API_URL}/api/apple-wallet/generate?entreprise_id=${entrepriseId}`,
         {
           headers: { Authorization: `Bearer ${clientToken}` },
           responseType: 'blob'
@@ -124,7 +124,7 @@ export default function ProfilPage() {
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `ewallet-${client?.qr_code || 'carte'}.pkpass`;
+      link.download = `ewallet-${entrepriseId}-${client?.qr_code || 'carte'}.pkpass`;
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -133,7 +133,7 @@ export default function ProfilPage() {
       console.error('❌ Erreur Apple Wallet:', err?.response?.data || err.message);
       alert('La carte Apple Wallet n’a pas pu être générée. Vérifiez les certificats Apple du serveur.');
     } finally {
-      setAppleWalletLoading(false);
+      setAppleWalletLoading(null);
     }
   };
 
@@ -199,9 +199,9 @@ export default function ProfilPage() {
           <h1 className="text-white text-xl font-bold mb-1">
             {client?.nom} {client?.prenom}
           </h1>
-          {client?.boutiques?.filter(Boolean).map((boutique: string) => (
-            <p key={boutique} className="mb-1 text-sm font-bold uppercase text-yellow-300">
-              {boutique}
+          {client?.boutiques?.map((boutique: { id: number; nom: string }) => (
+            <p key={boutique.id} className="mb-1 text-sm font-bold uppercase text-yellow-300">
+              {boutique.nom}
             </p>
           ))}
           <p className="text-gray-500 text-sm mb-3">{client?.email}</p>
@@ -277,42 +277,61 @@ export default function ProfilPage() {
           </div>
         </motion.div>
 
-        {/* Google Wallet */}
-        <motion.button
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          onClick={handleGoogleWallet}
-          disabled={walletLoading}
-          className="w-full bg-black hover:bg-gray-900 border border-white/[0.08] text-white font-semibold py-4 rounded-2xl flex items-center justify-center gap-3 transition-all disabled:opacity-50"
-        >
-          {walletLoading ? (
-            <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-          ) : (
-            <>
-              <Wallet size={20} className="text-blue-400" />
-              <span>Ajouter à Google Wallet</span>
-              <ChevronRight size={16} className="text-gray-600 ml-auto" />
-            </>
+        <section className="space-y-3">
+          <div className="px-1">
+            <h3 className="text-white font-semibold">Vos cartes de fidelite</h3>
+            <p className="mt-1 text-xs text-gray-500">
+              Chaque boutique a sa carte et son solde de points. Ajoutez-les separement a votre portefeuille.
+            </p>
+          </div>
+          {client?.boutiques?.length ? client.boutiques.map((
+            boutique: { id: number; nom: string; points_total: number },
+            index: number
+          ) => (
+            <motion.div
+              key={boutique.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 + index * 0.05 }}
+              className="rounded-2xl border border-white/[0.08] bg-[#0d0d0d] p-5"
+            >
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <h4 className="truncate font-semibold uppercase text-yellow-300">{boutique.nom}</h4>
+                <span className="shrink-0 text-sm font-bold text-white">{boutique.points_total} pts</span>
+              </div>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <button
+                  type="button"
+                  onClick={() => handleGoogleWallet(boutique.id)}
+                  disabled={walletLoading !== null || appleWalletLoading !== null}
+                  className="flex items-center justify-center gap-2 rounded-xl border border-white/[0.08] bg-black px-3 py-3 text-sm font-semibold text-white transition-colors hover:bg-gray-900 disabled:opacity-50"
+                >
+                  {walletLoading === boutique.id
+                    ? <span className="size-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                    : <Wallet size={17} className="text-blue-400" />}
+                  Google Wallet
+                  <ChevronRight size={15} className="text-gray-600" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleAppleWallet(boutique.id)}
+                  disabled={walletLoading !== null || appleWalletLoading !== null}
+                  className="flex items-center justify-center gap-2 rounded-xl bg-white px-3 py-3 text-sm font-semibold text-black transition-colors hover:bg-gray-200 disabled:opacity-50"
+                >
+                  {appleWalletLoading === boutique.id
+                    ? <span className="size-4 animate-spin rounded-full border-2 border-black/30 border-t-black" />
+                    : <Wallet size={17} />}
+                  Apple Wallet
+                  <ChevronRight size={15} className="text-black/50" />
+                </button>
+              </div>
+            </motion.div>
+          )) : (
+            <p className="rounded-2xl border border-white/[0.08] bg-[#0d0d0d] p-5 text-sm text-gray-500">
+              Aucune boutique associee a votre compte pour le moment.
+            </p>
           )}
-        </motion.button>
-        {/* Apple Wallet */}
-        <button
-          type="button"
-          onClick={handleAppleWallet}
-          disabled={appleWalletLoading}
-          className="w-full min-h-16 bg-white hover:bg-gray-200 border border-white text-black font-semibold py-4 px-4 rounded-2xl flex items-center justify-center gap-3 transition-all disabled:opacity-50"
-        >
-          {appleWalletLoading ? (
-            <div className="w-5 h-5 border-2 border-black/30 border-t-black rounded-full animate-spin" />
-          ) : (
-            <>
-              <Wallet size={20} className="text-black" />
-              <span>Ajouter à Apple Wallet</span>
-            </>
-          )}
-          <ChevronRight size={16} className="text-black/50 ml-auto" />
-        </button>
+        </section>
 
         <section className="bg-[#0d0d0d] border border-white/[0.08] rounded-2xl p-4">
           <div className="flex items-start gap-3">
@@ -320,22 +339,16 @@ export default function ProfilPage() {
             <div className="min-w-0 flex-1">
               <h3 className="text-white font-semibold">Notifications de campagne</h3>
               <p className="mt-1 text-xs text-gray-500">
-                Vos campagnes sont envoyées par {client?.mode_connexion === 'telephone' ? 'notification push' : 'email'}, selon votre dernière connexion.
+                Chaque boutique choisit d’envoyer ses campagnes par email, notification push ou automatiquement.
               </p>
-              {client?.mode_connexion === 'telephone' ? (
-                <button
-                  type="button"
-                  onClick={handleEnableNotifications}
-                  disabled={pushLoading}
-                  className="mt-3 min-h-10 rounded-lg bg-yellow-400 px-4 text-sm font-semibold text-black disabled:opacity-50"
-                >
-                  {pushLoading ? 'Activation…' : 'Activer les notifications'}
-                </button>
-              ) : (
-                <p className="mt-3 text-xs text-gray-500">
-                  Reconnectez-vous avec votre numéro de téléphone pour recevoir les campagnes par push.
-                </p>
-              )}
+              <button
+                type="button"
+                onClick={handleEnableNotifications}
+                disabled={pushLoading}
+                className="mt-3 min-h-10 rounded-lg bg-yellow-400 px-4 text-sm font-semibold text-black disabled:opacity-50"
+              >
+                {pushLoading ? 'Activation…' : 'Activer les notifications push'}
+              </button>
               {pushMessage && <p role="status" className="mt-3 text-sm text-gray-300">{pushMessage}</p>}
             </div>
           </div>

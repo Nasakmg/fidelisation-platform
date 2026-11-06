@@ -1,6 +1,10 @@
 const pool = require('../config/db');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const {
+  televerserIconeEntreprise,
+  supprimerIconeEntreprise
+} = require('../config/firebaseAdmin');
 
 // Inscription entreprise
 const inscrireEntreprise = async (req, res) => {
@@ -153,6 +157,69 @@ const mettreAJourNotificationIcon = async (req, res) => {
   }
 };
 
+const televerserNotificationIcon = async (req, res) => {
+  if (req.user?.role !== 'entreprise') {
+    return res.status(403).json({ message: '❌ Accès réservé aux entreprises' });
+  }
+
+  const image = req.body;
+  if (!Buffer.isBuffer(image) || image.length === 0) {
+    return res.status(400).json({ message: '❌ Sélectionnez une image PNG, JPEG ou WebP' });
+  }
+  if (image.length > 2 * 1024 * 1024) {
+    return res.status(413).json({ message: '❌ L’image ne doit pas dépasser 2 Mo' });
+  }
+
+  let contentType;
+  if (
+    image.length >= 8
+    && image.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))
+  ) {
+    contentType = 'image/png';
+  } else if (image.length >= 3 && image[0] === 0xff && image[1] === 0xd8 && image[2] === 0xff) {
+    contentType = 'image/jpeg';
+  } else if (
+    image.length >= 12
+    && image.toString('ascii', 0, 4) === 'RIFF'
+    && image.toString('ascii', 8, 12) === 'WEBP'
+  ) {
+    contentType = 'image/webp';
+  } else {
+    return res.status(400).json({ message: '❌ Format d’image invalide (PNG, JPEG ou WebP)' });
+  }
+
+  let uploadedIcon;
+  try {
+    uploadedIcon = await televerserIconeEntreprise(req.user.id, image, contentType);
+    const result = await pool.query(
+      `UPDATE entreprises SET notification_icon = $1
+       WHERE id = $2
+       RETURNING notification_icon`,
+      [uploadedIcon.url, req.user.id]
+    );
+
+    if (result.rows.length === 0) {
+      await supprimerIconeEntreprise(uploadedIcon.objectPath);
+      return res.status(404).json({ message: '❌ Entreprise introuvable' });
+    }
+
+    return res.json({
+      message: '✅ Image téléversée et enregistrée',
+      notification_icon: result.rows[0].notification_icon
+    });
+  } catch (err) {
+    if (uploadedIcon?.objectPath) {
+      try {
+        await supprimerIconeEntreprise(uploadedIcon.objectPath);
+      } catch (deleteError) {
+        console.error('Échec suppression de l’icône non enregistrée:', deleteError.message);
+      }
+    }
+    console.error('❌ Erreur téléversement icône:', err.message);
+    return res.status(500).json({ message: '❌ Téléversement de l’image impossible', error: err.message });
+  }
+};
+
 // Liste des clients de l'entreprise
 const getClients = async (req, res) => {
   const entreprise_id = req.user.id;
@@ -227,6 +294,6 @@ module.exports = {
   getClients,
   supprimerClientEntreprise,
   getNotificationIcon,
-  mettreAJourNotificationIcon
+  mettreAJourNotificationIcon,
+  televerserNotificationIcon
 };
-

@@ -16,6 +16,8 @@ services:
         sync: false
       - key: FIREBASE_PRIVATE_KEY
         sync: false
+      - key: FIREBASE_STORAGE_BUCKET
+        value: fidelitewalletperso.firebasestorage.app
       - key: RESEND_API_KEY
         sync: false
       - key: RESEND_FROM_EMAIL

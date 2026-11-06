@@ -1,11 +1,34 @@
-const firebaseAdmin = require('firebase-admin');
 const { initializeApp, cert, getApps } = require('firebase-admin/app');
 const { getMessaging } = require('firebase-admin/messaging');
+const { Storage } = require('@google-cloud/storage');
 const path = require('path');
 const fs = require('fs');
 const pool = require('./db');
+const crypto = require('crypto');
 
 let isInitialized = false;
+let storageClient = null;
+
+const getServiceAccountCredentials = () => {
+  const privateKey = (process.env.FIREBASE_PRIVATE_KEY || '')
+    .replace(/\\n/g, '\n')
+    .replace(/^"|"$/g, '');
+
+  if (process.env.FIREBASE_PROJECT_ID && process.env.FIREBASE_CLIENT_EMAIL && privateKey) {
+    return {
+      project_id: process.env.FIREBASE_PROJECT_ID,
+      client_email: process.env.FIREBASE_CLIENT_EMAIL,
+      private_key: privateKey
+    };
+  }
+
+  const serviceAccountPath = path.join(__dirname, 'fidelitewalletperso-789d16de0a70.json');
+  if (fs.existsSync(serviceAccountPath)) {
+    return JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
+  }
+
+  return null;
+};
 
 const initAdmin = () => {
   if (isInitialized || getApps().length > 0) {
@@ -13,32 +36,17 @@ const initAdmin = () => {
   }
 
   try {
-    // Priorité aux credentials configurés dans l'environnement (local ou Render).
-    const privateKey = (process.env.FIREBASE_PRIVATE_KEY || '')
-      .replace(/\\n/g, '\n')
-      .replace(/^"|"$/g, '');
-
-    if (process.env.FIREBASE_PROJECT_ID && process.env.FIREBASE_CLIENT_EMAIL && privateKey) {
+    const serviceAccount = getServiceAccountCredentials();
+    if (serviceAccount) {
       initializeApp({
         credential: cert({
-          projectId: process.env.FIREBASE_PROJECT_ID,
-          clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-          privateKey
+          projectId: serviceAccount.project_id || serviceAccount.projectId,
+          clientEmail: serviceAccount.client_email || serviceAccount.clientEmail,
+          privateKey: serviceAccount.private_key || serviceAccount.privateKey
         })
       });
       isInitialized = true;
-      console.log('✅ Firebase Admin connecté via variables d\'environnement !');
-      return true;
-    }
-
-    const serviceAccountPath = path.join(__dirname, 'fidelitewalletperso-789d16de0a70.json');
-
-    // Secours local : fichier JSON présent
-    if (fs.existsSync(serviceAccountPath)) {
-      const serviceAccount = require(serviceAccountPath);
-      initializeApp({ credential: cert(serviceAccount) });
-      isInitialized = true;
-      console.log('✅ Firebase Admin connecté via fichier JSON !');
+      console.log('✅ Firebase Admin connecté.');
       return true;
     }
 
@@ -47,6 +55,52 @@ const initAdmin = () => {
     console.error('❌ Erreur initialisation Firebase Admin:', err.message);
     return false;
   }
+};
+
+const getStorageClient = () => {
+  if (storageClient) return storageClient;
+
+  const serviceAccount = getServiceAccountCredentials();
+  if (!serviceAccount?.client_email || !serviceAccount?.private_key) {
+    throw new Error('Identifiants Firebase Storage manquants.');
+  }
+
+  storageClient = new Storage({
+    projectId: serviceAccount.project_id || process.env.FIREBASE_PROJECT_ID,
+    credentials: {
+      client_email: serviceAccount.client_email,
+      private_key: serviceAccount.private_key.replace(/\\n/g, '\n').replace(/^"|"$/g, '')
+    }
+  });
+  return storageClient;
+};
+
+const televerserIconeEntreprise = async (entrepriseId, buffer, contentType) => {
+  const bucketName = process.env.FIREBASE_STORAGE_BUCKET
+    || 'fidelitewalletperso.firebasestorage.app';
+  const token = crypto.randomBytes(32).toString('hex');
+  const objectPath = `notification-icons/${entrepriseId}/${crypto.randomBytes(16).toString('hex')}`;
+  const file = getStorageClient().bucket(bucketName).file(objectPath);
+
+  await file.save(buffer, {
+    resumable: false,
+    metadata: {
+      contentType,
+      cacheControl: 'public, max-age=3600',
+      metadata: { firebaseStorageDownloadTokens: token }
+    }
+  });
+
+  return {
+    objectPath,
+    url: `https://firebasestorage.googleapis.com/v0/b/${bucketName}/o/${encodeURIComponent(objectPath)}?alt=media&token=${token}`
+  };
+};
+
+const supprimerIconeEntreprise = async (objectPath) => {
+  const bucketName = process.env.FIREBASE_STORAGE_BUCKET
+    || 'fidelitewalletperso.firebasestorage.app';
+  await getStorageClient().bucket(bucketName).file(objectPath).delete({ ignoreNotFound: true });
 };
 
 const envoyerNotificationPush = async (
@@ -112,4 +166,8 @@ const envoyerNotificationPush = async (
   }
 };
 
-module.exports = { envoyerNotificationPush };
+module.exports = {
+  envoyerNotificationPush,
+  televerserIconeEntreprise,
+  supprimerIconeEntreprise
+};

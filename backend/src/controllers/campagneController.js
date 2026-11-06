@@ -4,16 +4,20 @@ const { envoyerNotificationPush } = require('../config/firebaseAdmin');
 
 const creerCampagne = async (req, res) => {
   const { titre, message } = req.body;
+  const canal = req.body.canal || 'auto';
   const entreprise_id = req.user.id;
   if (req.user?.role !== 'entreprise') {
     return res.status(403).json({ message: '❌ Accès réservé aux entreprises' });
+  }
+  if (!['auto', 'email', 'push'].includes(canal)) {
+    return res.status(400).json({ message: '❌ Canal de campagne invalide' });
   }
 
   try {
     const result = await pool.query(
       `INSERT INTO campagnes (entreprise_id, titre, message, canal, statut)
-       VALUES ($1, $2, $3, 'auto', 'brouillon') RETURNING *`,
-      [entreprise_id, titre, message]
+       VALUES ($1, $2, $3, $4, 'brouillon') RETURNING *`,
+      [entreprise_id, titre, message, canal]
     );
     res.status(201).json({ message: '✅ Campagne créée !', campagne: result.rows[0] });
   } catch (err) {
@@ -94,7 +98,9 @@ const envoyerCampagne = async (req, res) => {
     clientsCibles = clientsResult.rows.length;
 
     for (const client of clientsResult.rows) {
-      const canal = client.mode_connexion === 'telephone' ? 'push' : 'email';
+      const canal = campagne.canal === 'auto'
+        ? (client.mode_connexion === 'telephone' ? 'push' : 'email')
+        : campagne.canal;
       let tokens = [];
 
       if (canal === 'push') {

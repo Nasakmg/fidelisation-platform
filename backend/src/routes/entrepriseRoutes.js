@@ -7,7 +7,8 @@ const {
   getClients,
   supprimerClientEntreprise,
   getNotificationIcon,
-  mettreAJourNotificationIcon
+  mettreAJourNotificationIcon,
+  televerserNotificationIcon
 } = require('../controllers/entrepriseController');
 const { verifyToken } = require('../middleware/auth');
 
@@ -15,6 +16,18 @@ router.post('/inscription', inscrireEntreprise);
 router.post('/connexion', connecterEntreprise);
 router.get('/notification-icon', verifyToken, getNotificationIcon);
 router.patch('/notification-icon', verifyToken, mettreAJourNotificationIcon);
+router.post(
+  '/notification-icon',
+  verifyToken,
+  express.raw({ type: ['image/png', 'image/jpeg', 'image/webp'], limit: '2mb' }),
+  (err, req, res, next) => {
+    if (err.type === 'entity.too.large') {
+      return res.status(413).json({ message: '❌ L’image ne doit pas dépasser 2 Mo' });
+    }
+    return next(err);
+  },
+  televerserNotificationIcon
+);
 router.get('/clients', verifyToken, getClients);
 router.delete('/clients/:id', verifyToken, supprimerClientEntreprise);
 

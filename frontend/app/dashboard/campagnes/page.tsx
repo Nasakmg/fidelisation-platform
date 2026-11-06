@@ -5,10 +5,16 @@ import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  ArrowLeft, Megaphone, Plus, Send,
+  ArrowLeft, Megaphone, Plus, Send, Mail,
   Trash2, Bell,
   Clock, CheckCircle, X, Zap
 } from 'lucide-react';
+
+const canaux = [
+  { value: 'auto', label: 'Automatique', detail: 'Selon les préférences client' },
+  { value: 'email', label: 'Email', detail: 'Envoyer par email' },
+  { value: 'push', label: 'Notification push', detail: 'Aux appareils activés' }
+] as const;
 
 export default function CampagnesPage() {
   const { token } = useAuth();
@@ -18,7 +24,7 @@ export default function CampagnesPage() {
   const [showForm, setShowForm] = useState(false);
   const [envoi, setEnvoi] = useState<number | null>(null);
   const [formData, setFormData] = useState({
-    titre: '', message: ''
+    titre: '', message: '', canal: 'auto' as 'auto' | 'email' | 'push'
   });
 
   useEffect(() => {
@@ -48,7 +54,7 @@ export default function CampagnesPage() {
         formData,
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      setFormData({ titre: '', message: '' });
+      setFormData({ titre: '', message: '', canal: 'auto' });
       setShowForm(false);
       fetchCampagnes();
     } catch (err) { console.error(err); }
@@ -157,7 +163,33 @@ export default function CampagnesPage() {
                     />
                   </div>
 
-                  <p className="text-sm text-gray-500">Envoi par email ou notification push selon le dernier mode de connexion de chaque client.</p>
+                  <fieldset className="space-y-2">
+                    <legend className="text-sm font-medium text-gray-400">Canal d’envoi</legend>
+                    <div className="grid gap-2 sm:grid-cols-3">
+                      {canaux.map(option => (
+                        <button
+                          key={option.value}
+                          type="button"
+                          aria-pressed={formData.canal === option.value}
+                          onClick={() => setFormData({
+                            ...formData,
+                            canal: option.value
+                          })}
+                          className={`rounded-xl border p-3 text-left transition-colors ${
+                            formData.canal === option.value
+                              ? 'border-yellow-400/40 bg-yellow-400/10 text-yellow-300'
+                              : 'border-white/[0.08] bg-white/[0.03] text-gray-400'
+                          }`}
+                        >
+                          <span className="flex items-center gap-2 text-sm font-medium">
+                            {option.value === 'email' ? <Mail size={14} /> : <Bell size={14} />}
+                            {option.label}
+                          </span>
+                          <span className="mt-1 block text-xs text-gray-500">{option.detail}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </fieldset>
 
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-gray-400">Message</label>
@@ -252,7 +284,13 @@ export default function CampagnesPage() {
                         </div>
                         <p className="text-gray-500 text-sm mb-3 line-clamp-2">{campagne.message}</p>
                         <div className="flex items-center gap-4 text-xs text-gray-700">
-                          <span>Canal : Automatique</span>
+                          <span>
+                            Canal : {campagne.canal === 'email'
+                              ? 'Email'
+                              : campagne.canal === 'push'
+                                ? 'Notification push'
+                                : 'Automatique'}
+                          </span>
                           <span>•</span>
                           <span>Créée le {new Date(campagne.created_at).toLocaleDateString('fr-FR')}</span>
                           {campagne.date_envoi && (

@@ -56,14 +56,16 @@ const creerClasseCarte = async () => {
 };
 
 // Génération du lien JWT pour l'ajout de la carte par les clients
-const genererLienWallet = async (client) => {
+const genererLienWallet = async (client, entreprise) => {
   const creds = getCredentials();
   if (!creds || !creds.client_email || !creds.private_key) {
     throw new Error('Identifiants Google Wallet invalides ou manquants.');
   }
+  if (!entreprise?.id || !entreprise?.nom) {
+    throw new Error('Boutique requise pour générer la carte Google Wallet.');
+  }
 
-  const cleanCode = String(client.qr_code || client.id).replace(/[^a-zA-Z0-9_-]/g, '');
-  const objectId = `${ISSUER_ID}.USR_${cleanCode}_${Date.now()}`;
+  const objectId = `${ISSUER_ID}.USR_${client.id}_ENT_${entreprise.id}`;
 
   const claims = {
     iss: creds.client_email,
@@ -79,10 +81,10 @@ const genererLienWallet = async (client) => {
           id: objectId,
           classId: CLASS_ID,
           state: 'ACTIVE',
-          programName: 'Programme de Fidélité',
-          issuerName: 'E-Wallet',
+          programName: entreprise.nom,
+          issuerName: entreprise.nom,
           accountName: `${client.prenom || ''} ${client.nom || ''}`.trim() || 'Client',
-          accountId: String(client.id || cleanCode),
+          accountId: `${client.id}-${entreprise.id}`,
           barcode: {
             type: 'QR_CODE',
             value: String(client.qr_code || client.id),
@@ -90,7 +92,7 @@ const genererLienWallet = async (client) => {
           },
           loyaltyPoints: {
             label: 'Points',
-            balance: { string: String(client.points_total || 0) }
+            balance: { string: String(entreprise.points_total || 0) }
           }
         },
       ],

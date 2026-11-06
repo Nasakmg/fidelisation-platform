@@ -9,19 +9,54 @@ import { useAuth } from '../../context/AuthContext';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
+const compresserIcone = async (fichier: File): Promise<File> => {
+  const formatsImage = ['image/png', 'image/jpeg', 'image/webp', 'image/heic', 'image/heif', 'image/avif'];
+  if (!formatsImage.includes(fichier.type)) {
+    throw new Error('Choisissez une image PNG, JPEG, WebP ou HEIC.');
+  }
+  if (fichier.size > 15 * 1024 * 1024) {
+    throw new Error('La photo ne doit pas dépasser 15 Mo.');
+  }
+
+  const image = await createImageBitmap(fichier);
+  try {
+    const tailleMax = 512;
+    const facteur = Math.min(1, tailleMax / Math.max(image.width, image.height));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(image.width * facteur));
+    canvas.height = Math.max(1, Math.round(image.height * facteur));
+    const contexte = canvas.getContext('2d');
+    if (!contexte) throw new Error('Impossible de traiter cette image.');
+    contexte.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+    const blob = await new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob(
+        resultat => resultat ? resolve(resultat) : reject(new Error('Compression de l’image impossible.')),
+        'image/jpeg',
+        0.85
+      );
+    });
+    const nom = fichier.name.replace(/\.[^.]+$/, '') || 'icone';
+    return new File([blob], `${nom}.jpg`, { type: 'image/jpeg' });
+  } finally {
+    image.close();
+  }
+};
+
 export default function ParametresPage() {
   const { token } = useAuth();
   const router = useRouter();
   const [iconUrl, setIconUrl] = useState('');
+  const [fichierIcone, setFichierIcone] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState('');
   const [chargement, setChargement] = useState(true);
   const [enregistrement, setEnregistrement] = useState(false);
   const [message, setMessage] = useState('');
   const [erreur, setErreur] = useState('');
-  let previewUrl = '';
-  try {
-    const parsedUrl = new URL(iconUrl);
-    if (parsedUrl.protocol === 'https:') previewUrl = iconUrl;
-  } catch {}
+  useEffect(() => {
+    if (!previewUrl.startsWith('blob:')) return;
+    return () => URL.revokeObjectURL(previewUrl);
+  }, [previewUrl]);
 
   useEffect(() => {
     if (!token) {
@@ -45,15 +80,55 @@ export default function ParametresPage() {
     setErreur('');
 
     try {
+      const response = fichierIcone
+        ? await axios.post(
+          `${API_URL}/api/entreprises/notification-icon`,
+          fichierIcone,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': fichierIcone.type
+            }
+          }
+        )
+        : await axios.patch(
+          `${API_URL}/api/entreprises/notification-icon`,
+          { notification_icon: iconUrl },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+      setIconUrl(response.data.notification_icon || '');
+      setFichierIcone(null);
+      setPreviewUrl('');
+      setMessage(response.data.message);
+    } catch (error: unknown) {
+      const messageErreur = axios.isAxiosError<{ message?: string }>(error)
+        ? error.response?.data?.message
+        : error instanceof Error ? error.message : undefined;
+      setErreur(messageErreur || 'Enregistrement impossible.');
+    } finally {
+      setEnregistrement(false);
+    }
+  };
+
+  const utiliserIconeParDefaut = async () => {
+    setEnregistrement(true);
+    setMessage('');
+    setErreur('');
+    try {
       const response = await axios.patch(
         `${API_URL}/api/entreprises/notification-icon`,
-        { notification_icon: iconUrl },
+        { notification_icon: '' },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      setIconUrl(response.data.notification_icon || '');
+      setIconUrl('');
+      setFichierIcone(null);
+      setPreviewUrl('');
       setMessage(response.data.message);
-    } catch {
-      setErreur('Enregistrement impossible.');
+    } catch (error: unknown) {
+      const messageErreur = axios.isAxiosError<{ message?: string }>(error)
+        ? error.response?.data?.message
+        : error instanceof Error ? error.message : undefined;
+      setErreur(messageErreur || 'Suppression impossible.');
     } finally {
       setEnregistrement(false);
     }
@@ -85,22 +160,42 @@ export default function ParametresPage() {
           <form onSubmit={enregistrer} className="space-y-5">
             <div className="flex items-center gap-4">
               <div className="flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-white/10 bg-white/[0.04]">
-                {previewUrl ? (
-                  <Image src={previewUrl} alt="Aperçu de l’icône" width={64} height={64} unoptimized className="size-full object-cover" />
+                {previewUrl || iconUrl ? (
+                  <Image src={previewUrl || iconUrl} alt="Aperçu de l’icône" width={64} height={64} unoptimized className="size-full object-cover" />
                 ) : (
                   <ImageIcon size={24} className="text-gray-600" />
                 )}
               </div>
               <label className="min-w-0 flex-1 space-y-2 text-sm text-gray-400">
-                URL HTTPS de l’image
+                Choisir une photo depuis votre appareil (compression automatique, 15 Mo maximum)
                 <input
-                  type="url"
-                  value={iconUrl}
-                  onChange={event => setIconUrl(event.target.value)}
-                  maxLength={2048}
-                  placeholder="https://exemple.com/icone.png"
-                  className="w-full rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2.5 text-sm text-white outline-none transition-colors focus:border-yellow-400/50"
+                  type="file"
+                  accept="image/*"
+                  onChange={async event => {
+                    setMessage('');
+                    setErreur('');
+                    const input = event.currentTarget;
+                    const fichier = input.files?.[0];
+                    if (!fichier) {
+                      setFichierIcone(null);
+                      setPreviewUrl('');
+                      return;
+                    }
+                    input.value = '';
+                    try {
+                      const iconeCompressee = await compresserIcone(fichier);
+                      setFichierIcone(iconeCompressee);
+                      setPreviewUrl(URL.createObjectURL(iconeCompressee));
+                    } catch (error) {
+                      input.value = '';
+                      setFichierIcone(null);
+                      setPreviewUrl('');
+                      setErreur(error instanceof Error ? error.message : 'Traitement de l’image impossible.');
+                    }
+                  }}
+                  className="block w-full text-sm text-gray-400 file:mr-3 file:rounded-lg file:border-0 file:bg-white/10 file:px-3 file:py-2 file:text-sm file:text-white"
                 />
+                {fichierIcone && <span className="block text-xs text-gray-500">{fichierIcone.name}</span>}
               </label>
             </div>
 
@@ -118,8 +213,8 @@ export default function ParametresPage() {
               </button>
               <button
                 type="button"
-                disabled={enregistrement || !iconUrl}
-                onClick={() => setIconUrl('')}
+                disabled={enregistrement || (!iconUrl && !fichierIcone)}
+                onClick={utiliserIconeParDefaut}
                 className="rounded-lg border border-white/10 px-4 py-2.5 text-sm text-gray-400 transition-colors hover:text-white disabled:opacity-40"
               >
                 Utiliser l’icône par défaut

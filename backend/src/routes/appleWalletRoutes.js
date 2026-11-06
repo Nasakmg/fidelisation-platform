@@ -62,22 +62,26 @@ router.get('/generate', verifyToken, async (req, res) => {
       return res.status(404).json({ message: '❌ Client introuvable' });
     }
 
+    const entrepriseId = Number(req.query.entreprise_id);
+    if (!Number.isSafeInteger(entrepriseId) || entrepriseId <= 0) {
+      return res.status(400).json({ message: '❌ Boutique requise pour générer la carte' });
+    }
+
     const entrepriseResult = await pool.query(
-      `SELECT e.id, e.nom
+      `SELECT e.id, e.nom,
+              COALESCE(SUM(t.points_gagnes), 0)::integer AS points_total
        FROM client_entreprise ce
        INNER JOIN entreprises e ON e.id = ce.entreprise_id
-       LEFT JOIN (
-         SELECT entreprise_id, MAX(created_at) AS derniere_transaction
-         FROM transactions
-         WHERE client_id = $1
-         GROUP BY entreprise_id
-       ) t ON t.entreprise_id = e.id
-       WHERE ce.client_id = $1
-       ORDER BY t.derniere_transaction DESC NULLS LAST, ce.created_at DESC, e.id DESC
-       LIMIT 1`,
-      [client.id]
+       LEFT JOIN transactions t
+         ON t.client_id = ce.client_id AND t.entreprise_id = ce.entreprise_id
+       WHERE ce.client_id = $1 AND e.id = $2
+       GROUP BY e.id`,
+      [client.id, entrepriseId]
     );
-    const nomEntreprise = entrepriseResult.rows[0]?.nom || 'E-Wallet';
+    const entreprise = entrepriseResult.rows[0];
+    if (!entreprise) {
+      return res.status(404).json({ message: '❌ Boutique non associée à ce compte' });
+    }
 
     const pass = await PKPass.from(
       {
@@ -85,10 +89,10 @@ router.get('/generate', verifyToken, async (req, res) => {
         certificates: getCertificates()
       },
       {
-        serialNumber: `EWALLET-${client.id}-${Date.now()}`,
-        organizationName: nomEntreprise,
-        logoText: nomEntreprise,
-        description: `Carte de fidélité ${nomEntreprise}`
+        serialNumber: `EWALLET-${client.id}-${entreprise.id}`,
+        organizationName: entreprise.nom,
+        logoText: entreprise.nom,
+        description: `Carte de fidélité ${entreprise.nom}`
       }
     );
 
@@ -99,7 +103,7 @@ router.get('/generate', verifyToken, async (req, res) => {
     pass.primaryFields.push({
       key: 'balance',
       label: 'Solde',
-      value: `${client.points_total ?? 0} pts`,
+      value: `${entreprise.points_total} pts`,
       textAlignment: 'PKTextAlignmentCenter'
     });
     pass.secondaryFields.push({
@@ -127,7 +131,7 @@ router.get('/generate', verifyToken, async (req, res) => {
 
     res.set({
       'Content-Type': 'application/vnd.apple.pkpass',
-      'Content-Disposition': `attachment; filename="ewallet-${client.qr_code}.pkpass"`,
+      'Content-Disposition': `attachment; filename="ewallet-${entreprise.id}-${client.qr_code}.pkpass"`,
       'Content-Length': buffer.length
     });
 
