@@ -19,7 +19,7 @@ export default function ClientsPage() {
   const [filtre, setFiltre] = useState('tous');
 
   useEffect(() => {
-    if (!token) { router.push('/'); return; }
+    if (!token) { router.push('/connexion'); return; }
     fetchClients();
   }, [token]);
 

@@ -60,7 +60,7 @@ export default function ParametresPage() {
 
   useEffect(() => {
     if (!token) {
-      router.replace('/');
+      router.replace('/connexion');
       return;
     }
 

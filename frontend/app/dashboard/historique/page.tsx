@@ -22,7 +22,7 @@ export default function HistoriquePage() {
   });
 
   useEffect(() => {
-    if (!token) { router.push('/'); return; }
+    if (!token) { router.push('/connexion'); return; }
     fetchHistorique();
   }, [token, page]);
 

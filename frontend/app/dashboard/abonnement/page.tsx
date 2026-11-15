@@ -18,7 +18,7 @@ function AbonnementContent() {
   const success = searchParams.get('success');
 
   useEffect(() => {
-    if (!token) { router.push('/'); return; }
+    if (!token) { router.push('/connexion'); return; }
     fetchData();
   }, [token]);
 

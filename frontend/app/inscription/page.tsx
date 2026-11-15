@@ -12,15 +12,17 @@ import {
 } from 'lucide-react';
 
 export default function InscriptionPage() {
+  const { login, inscriptionBrouillon, effacerInscriptionBrouillon } = useAuth();
   const [formData, setFormData] = useState({
-    nom: '', email: '', telephone: '',
+    nom: inscriptionBrouillon?.nom || '',
+    email: inscriptionBrouillon?.email || '',
+    telephone: inscriptionBrouillon?.telephone || '',
     mot_de_passe: '', secteur: '', adresse: '',
-    pays: 'Sénégal' // valeur par défaut
+    pays: 'Sénégal'
   });
   const [erreur, setErreur] = useState('');
   const [succes, setSucces] = useState(false);
   const [chargement, setChargement] = useState(false);
-  const { login } = useAuth();
   const router = useRouter();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -37,6 +39,7 @@ export default function InscriptionPage() {
         formData
       );
       login(response.data.token, response.data.entreprise);
+      effacerInscriptionBrouillon();
       setSucces(true);
       setTimeout(() => router.push('/dashboard'), 1500);
     } catch (err: unknown) {
@@ -352,7 +355,7 @@ export default function InscriptionPage() {
 
           <p className="text-center text-gray-600 text-sm mt-6">
             Déjà un compte ?{' '}
-            <Link href="/" className="text-yellow-400 hover:text-yellow-300 font-medium transition-colors">
+            <Link href="/connexion" className="text-yellow-400 hover:text-yellow-300 font-medium transition-colors">
               Se connecter
             </Link>
           </p>

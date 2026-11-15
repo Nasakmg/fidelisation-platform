@@ -14,7 +14,7 @@ export default function PassagesPage() {
   const [chargement, setChargement] = useState(true);
 
   useEffect(() => {
-    if (!token) { router.push('/'); return; }
+    if (!token) { router.push('/connexion'); return; }
     fetchPassages();
   }, [token]);
 

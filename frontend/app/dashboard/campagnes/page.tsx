@@ -28,7 +28,7 @@ export default function CampagnesPage() {
   });
 
   useEffect(() => {
-    if (!token) { router.push('/'); return; }
+    if (!token) { router.push('/connexion'); return; }
     fetchCampagnes();
   }, [token]);
 

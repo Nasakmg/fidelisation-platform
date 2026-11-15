@@ -191,7 +191,7 @@ export default function DashboardPage() {
   const [chargement, setChargement] = useState(true);
 
   useEffect(() => {
-    if (!token) { router.push('/'); return; }
+    if (!token) { router.push('/connexion'); return; }
     fetchDashboard();
   }, [token]);
 
@@ -209,7 +209,7 @@ export default function DashboardPage() {
     }
   };
 
-  const handleLogout = () => { logout(); router.push('/'); };
+  const handleLogout = () => { logout(); router.push('/connexion'); };
 
   if (chargement) {
     return (
