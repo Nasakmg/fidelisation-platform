@@ -1,8 +1,10 @@
 'use client';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import axios from 'axios';
 import { motion } from 'framer-motion';
+import { useAuth } from '../context/AuthContext';
 import {
   Building2, Mail, Phone, Lock,
   MapPin, Briefcase, ArrowRight, Globe,
@@ -18,6 +20,7 @@ export default function InscriptionPage() {
   const [erreur, setErreur] = useState('');
   const [succes, setSucces] = useState(false);
   const [chargement, setChargement] = useState(false);
+  const { login } = useAuth();
   const router = useRouter();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -29,14 +32,18 @@ export default function InscriptionPage() {
     setChargement(true);
     setErreur('');
     try {
-      await axios.post(
+      const response = await axios.post(
         `${process.env.NEXT_PUBLIC_API_URL}/api/entreprises/inscription`,
         formData
       );
+      login(response.data.token, response.data.entreprise);
       setSucces(true);
-      setTimeout(() => router.push('/'), 2000);
-    } catch (err: any) {
-      setErreur(err.response?.data?.message || '❌ Erreur lors de l\'inscription');
+      setTimeout(() => router.push('/dashboard'), 1500);
+    } catch (err: unknown) {
+      const messageErreur = axios.isAxiosError<{ message?: string }>(err)
+        ? err.response?.data?.message
+        : undefined;
+      setErreur(messageErreur || '❌ Erreur lors de l\'inscription');
     } finally {
       setChargement(false);
     }
@@ -82,7 +89,7 @@ export default function InscriptionPage() {
             <CheckCircle size={40} className="text-green-400" />
           </div>
           <h2 className="text-2xl font-bold text-white mb-2">Compte créé !</h2>
-          <p className="text-gray-500">Redirection vers la connexion...</p>
+          <p className="text-gray-500">Ouverture de votre espace entreprise...</p>
         </motion.div>
       </div>
     );
@@ -125,7 +132,7 @@ export default function InscriptionPage() {
             </span>
           </h1>
           <p className="text-gray-400 mb-10">
-            Créez votre compte gratuitement et commencez à fidéliser vos clients dès aujourd'hui.
+            Créez votre compte gratuitement et commencez à fidéliser vos clients dès aujourd&apos;hui.
           </p>
 
           <div className="space-y-3">
@@ -153,7 +160,7 @@ export default function InscriptionPage() {
             ))}
           </div>
           <p className="text-gray-300 text-sm mb-3">
-            "En 2 mois, nous avons fidélisé plus de 500 clients grâce à E-Wallet."
+            &quot;En 2 mois, nous avons fidélisé plus de 500 clients grâce à E-Wallet.&quot;
           </p>
           <p className="text-gray-600 text-xs">Moussa Sow — Restaurant Le Savoureux, Dakar</p>
         </div>
@@ -182,7 +189,7 @@ export default function InscriptionPage() {
             {/* Nom */}
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Nom de l'entreprise
+                Nom de l&apos;entreprise
               </label>
               <div className="relative">
                 <Building2 size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600" />
@@ -258,7 +265,7 @@ export default function InscriptionPage() {
             {/* Secteur */}
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Secteur d'activité
+                Secteur d&apos;activité
               </label>
               <div className="relative">
                 <Briefcase size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600" />
@@ -345,9 +352,9 @@ export default function InscriptionPage() {
 
           <p className="text-center text-gray-600 text-sm mt-6">
             Déjà un compte ?{' '}
-            <a href="/" className="text-yellow-400 hover:text-yellow-300 font-medium transition-colors">
+            <Link href="/" className="text-yellow-400 hover:text-yellow-300 font-medium transition-colors">
               Se connecter
-            </a>
+            </Link>
           </p>
         </div>
       </motion.div>
